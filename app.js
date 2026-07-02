@@ -899,7 +899,8 @@ function startScanner() {
       stopScanner();
       return;
     }
-    const cameraId = cameras[0].id;
+    const rearCamera = cameras.find(cam => /back|rear|environment/i.test(cam.label || '')) || cameras[0];
+    const cameraId = rearCamera.id;
     html5QrCode.start(
       { deviceId: { exact: cameraId } },
       config,
