@@ -7,17 +7,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root {
-    /* Kindle-inspired: paper white, warm ink, Amazon orange */
     --paper: #ffffff;
     --paper-warm: #faf9f7;
     --paper-shade: #f2f0ec;
     --ink: #232323;
     --ink-soft: #6b6b6b;
-    --orange: #ff9900;
-    --orange-deep: #e47911;
-    --teal: #007185;
+    --accent: #ff9900;
+    --accent-deep: #e47911;
+    --accent-2: #007185;
+    --btn-text: #232323;
     --line: #e3e0da;
-    --card-shadow: 0 1px 3px rgba(35,35,35,0.08), 0 4px 14px rgba(35,35,35,0.06);
+    --shadow-a: rgba(35,35,35,0.08);
+    --shadow-b: rgba(35,35,35,0.06);
     --radius: 12px;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,17 +26,20 @@
     * { animation: none !important; transition: none !important; }
   }
   body {
-    background: var(--paper-warm);
+    background-color: var(--paper-warm);
     color: var(--ink);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     min-height: 100vh;
+    transition: background-color .25s ease, color .25s ease;
+    background-attachment: fixed;
   }
-  .serif { font-family: "Bookerly", Charter, "Iowan Old Style", Georgia, serif; }
 
   /* ---------- Header ---------- */
-  header {
-    background: var(--paper);
-    border-bottom: 1px solid var(--line);
+  header { background: var(--paper); position: relative; }
+  header::after {
+    content: ''; display: block; height: 4px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--accent));
+    opacity: .85;
   }
   .header-inner {
     max-width: 1080px; margin: 0 auto; padding: 18px 20px 14px;
@@ -45,52 +49,57 @@
     font-family: "Bookerly", Charter, "Iowan Old Style", Georgia, serif;
     font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
   }
-  .logo em { font-style: italic; color: var(--orange-deep); }
+  .logo em { font-style: italic; color: var(--accent-deep); }
+  .logo .emblem { font-style: normal; font-size: 20px; margin-left: 6px; }
   .tagline { color: var(--ink-soft); font-size: 12px; }
   .whoami { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-soft); }
   .avatar {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: var(--orange); color: #fff; font-weight: 700;
-    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--accent); color: var(--btn-text); font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 17px;
+    border: 2px solid var(--accent-deep);
   }
-  .link-btn { background: none; border: none; color: var(--teal); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; }
+  .avatar.big { width: 74px; height: 74px; font-size: 34px; }
+  .link-btn { background: none; border: none; color: var(--accent-2); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; }
 
-  nav {
-    background: var(--paper);
-    border-bottom: 1px solid var(--line);
-  }
+  nav { background: var(--paper); border-bottom: 1px solid var(--line); }
   .nav-inner {
     max-width: 1080px; margin: 0 auto; padding: 0 20px;
-    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    display: flex; gap: 0; overflow-x: auto; -webkit-overflow-scrolling: touch;
   }
   .tab {
     background: none; border: none; color: var(--ink-soft);
-    font-size: 14px; font-weight: 600; padding: 12px 14px; cursor: pointer;
+    font-size: 14px; font-weight: 600; padding: 12px 11px; cursor: pointer;
     border-bottom: 3px solid transparent; white-space: nowrap;
   }
   .tab:hover { color: var(--ink); }
-  .tab:focus-visible { outline: 2px solid var(--orange-deep); outline-offset: -2px; }
-  .tab.active { color: var(--orange-deep); border-bottom-color: var(--orange); }
+  .tab:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: -2px; }
+  .tab.active { color: var(--accent-deep); border-bottom-color: var(--accent); }
 
   main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 90px; }
   .view { display: none; }
   .view.active { display: block; animation: fadeIn .25s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
-  h2 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 24px; margin-bottom: 6px; }
-  .sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+  h2 {
+    font-family: "Bookerly", Charter, Georgia, serif; font-size: 24px; margin-bottom: 6px;
+    display: inline-block; position: relative;
+  }
+  h2::after {
+    content: ''; position: absolute; left: 0; bottom: -3px; width: 44px; height: 3px;
+    background: var(--accent); border-radius: 3px;
+  }
+  .sub { color: var(--ink-soft); font-size: 14px; margin: 10px 0 20px; }
 
   /* ---------- Sign in ---------- */
-  #signin {
-    max-width: 420px; margin: 8vh auto 0; text-align: center;
-  }
+  #signin { max-width: 420px; margin: 8vh auto 0; text-align: center; padding: 0 20px 60px; }
   #signin .book-mark { font-size: 44px; margin-bottom: 10px; }
   #signin h1 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 32px; margin-bottom: 6px; }
-  #signin h1 em { font-style: italic; color: var(--orange-deep); }
+  #signin h1 em { font-style: italic; color: var(--accent-deep); }
   #signin p { color: var(--ink-soft); font-size: 14px; margin-bottom: 24px; }
   .signin-card {
     background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
-    box-shadow: var(--card-shadow); padding: 24px; text-align: left;
+    box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b); padding: 24px; text-align: left;
   }
   .signin-card label { font-size: 13px; font-weight: 600; display: block; margin: 12px 0 6px; }
   .signin-card input {
@@ -105,12 +114,12 @@
     background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
     padding: 10px 12px; margin-bottom: 8px; cursor: pointer; font-size: 14px; color: var(--ink); text-align: left;
   }
-  .profile-row:hover { border-color: var(--orange); }
+  .profile-row:hover { border-color: var(--accent); }
   .profile-row .pe { color: var(--ink-soft); font-size: 12px; }
 
   /* ---------- Library ---------- */
   .shelf-stats { display: flex; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
-  .stat .num { font-family: "Bookerly", Charter, Georgia, serif; font-size: 26px; color: var(--orange-deep); font-weight: 700; }
+  .stat .num { font-family: "Bookerly", Charter, Georgia, serif; font-size: 26px; color: var(--accent-deep); font-weight: 700; }
   .stat .lbl { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 1px; }
 
   .toolbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
@@ -119,36 +128,57 @@
     border: 1px solid var(--line); border-radius: 8px;
     padding: 8px 12px; font-size: 16px;
   }
-  .search-input { flex: 1; min-width: 160px; }
-  select:focus, input:focus, textarea:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+  .search-input { flex: 1; min-width: 150px; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
-    gap: 18px;
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 18px; }
+  .group-block { margin-bottom: 26px; }
+  .group-head {
+    display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px;
   }
-  .book-card {
-    cursor: pointer; border: none; background: none; padding: 0; text-align: left; color: var(--ink); width: 100%;
+  .group-title {
+    background: none; border: none; cursor: pointer; text-align: left;
+    font-family: "Bookerly", Charter, Georgia, serif; font-size: 18px; font-weight: 700; color: var(--ink);
   }
-  .book-card:focus-visible { outline: 2px solid var(--orange-deep); outline-offset: 3px; border-radius: 8px; }
+  .group-title:hover { color: var(--accent-deep); text-decoration: underline; }
+  .group-title.plain { cursor: default; }
+  .group-title.plain:hover { color: var(--ink); text-decoration: none; }
+  .group-count { font-size: 12px; color: var(--ink-soft); }
+  .group-more { margin-left: auto; background: none; border: none; color: var(--accent-2); font-size: 12px; cursor: pointer; text-decoration: underline; white-space: nowrap; }
+
+  .book-card { cursor: pointer; border: none; background: none; padding: 0; text-align: left; color: var(--ink); width: 100%; }
+  .book-card:focus-visible { outline: 2px solid var(--accent-deep); outline-offset: 3px; border-radius: 8px; }
   .cover-wrap {
     position: relative; aspect-ratio: 2 / 3; border-radius: 6px; overflow: hidden;
     background: var(--paper-shade);
-    box-shadow: var(--card-shadow);
-    transition: transform .18s ease, box-shadow .18s ease;
+    box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
+    transition: transform .18s ease;
   }
-  .book-card:hover .cover-wrap { transform: translateY(-4px); box-shadow: 0 8px 22px rgba(35,35,35,0.18); }
+  .book-card:hover .cover-wrap { transform: translateY(-4px); }
   .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .cover-fallback {
     width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between;
-    padding: 12px; background: linear-gradient(160deg, #fff, var(--paper-shade));
-    border-left: 6px solid var(--orange);
+    padding: 12px; background: linear-gradient(160deg, var(--paper), var(--paper-shade));
+    border-left: 6px solid var(--accent);
   }
   .cover-fallback .t { font-family: "Bookerly", Charter, Georgia, serif; font-size: 14px; font-weight: 700; line-height: 1.25; }
   .cover-fallback .a { font-size: 11px; color: var(--ink-soft); }
+  .status-badge {
+    position: absolute; top: 6px; right: 6px;
+    background: var(--paper); color: var(--ink); border: 1px solid var(--line);
+    font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .5px;
+  }
+  .top-badge {
+    position: absolute; top: 6px; left: 6px;
+    background: var(--accent); color: var(--btn-text);
+    font-size: 11px; font-weight: 800; width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+  }
   .card-meta { margin-top: 8px; }
   .card-title { font-size: 13px; font-weight: 600; line-height: 1.25; display: block; }
-  .card-stars { color: var(--orange-deep); font-size: 12px; letter-spacing: 1px; margin-top: 3px; }
+  .card-stars { color: var(--accent-deep); font-size: 12px; letter-spacing: 1px; margin-top: 3px; }
   .card-stars .unrated { color: var(--ink-soft); font-style: italic; letter-spacing: 0; }
 
   .empty {
@@ -157,24 +187,34 @@
   }
   .empty .big { font-size: 34px; margin-bottom: 8px; }
 
-  /* ---------- Buttons ---------- */
+  /* ---------- Buttons & chips ---------- */
   .btn {
-    background: linear-gradient(#ffb84d, var(--orange)); color: var(--ink);
-    border: 1px solid var(--orange-deep); border-radius: 8px; padding: 12px 18px;
+    background: var(--accent); color: var(--btn-text);
+    border: 1px solid var(--accent-deep); border-radius: 8px; padding: 12px 18px;
     font-size: 14px; font-weight: 700; cursor: pointer;
     transition: filter .15s ease;
   }
-  .btn:hover { filter: brightness(1.04); }
+  .btn:hover { filter: brightness(1.06); }
   .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .btn:disabled { opacity: .5; cursor: default; }
   .btn.ghost { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
   .btn.ghost:hover { border-color: var(--ink-soft); filter: none; }
-  .btn.danger { background: var(--paper); color: #b3402e; border: 1px solid #e0b0a8; }
+  .btn.danger { background: var(--paper); color: #c0503e; border: 1px solid rgba(192,80,62,.4); }
+  .btn.small { padding: 7px 12px; font-size: 12px; }
 
-  /* ---------- Panels / scan ---------- */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    background: var(--paper); color: var(--ink-soft);
+    border: 1px solid var(--line); border-radius: 20px; padding: 8px 16px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .chip:hover { color: var(--ink); }
+  .chip.on { background: var(--accent); color: var(--btn-text); border-color: var(--accent-deep); }
+
+  /* ---------- Panels ---------- */
   .panel {
     background: var(--paper); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--card-shadow);
+    border-radius: var(--radius); box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
     padding: 20px; margin-bottom: 18px;
   }
   #reader { border-radius: 10px; overflow: hidden; max-width: 420px; margin: 12px auto; }
@@ -188,65 +228,130 @@
     padding: 12px; font-size: 16px;
   }
   .status { margin-top: 12px; font-size: 14px; color: var(--ink-soft); min-height: 20px; }
-  .status.err { color: #b3402e; }
-  .status.ok { color: #1d7a3e; }
+  .status.err { color: #c0503e; }
+  .status.ok { color: #2e8b57; }
 
   /* ---------- Detail ---------- */
   .detail { display: flex; gap: 22px; flex-wrap: wrap; }
   .detail .cover-wrap { width: 170px; flex-shrink: 0; }
   .detail-info { flex: 1; min-width: 240px; }
   .detail-info h3 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 22px; line-height: 1.2; }
-  .detail-info .author { color: var(--ink-soft); margin: 4px 0 12px; }
+  .detail-info .author { color: var(--ink-soft); margin: 4px 0 2px; }
+  .author-link { background: none; border: none; color: var(--accent-2); cursor: pointer; font-size: inherit; text-decoration: underline; padding: 0; }
+  .series-line { font-size: 13px; color: var(--ink-soft); margin-bottom: 8px; }
+  .blurb { font-size: 14px; line-height: 1.6; margin-top: 6px; }
+  .blurb.dim { color: var(--ink-soft); font-style: italic; }
 
   .stars { display: inline-flex; gap: 2px; }
   .star { position: relative; width: 34px; height: 34px; cursor: pointer; display: inline-block; }
   .star svg { width: 34px; height: 34px; display: block; }
-  .rating-label { margin-left: 10px; color: var(--orange-deep); font-weight: 700; font-size: 14px; vertical-align: middle; }
-  textarea {
+  .rating-label { margin-left: 10px; color: var(--accent-deep); font-weight: 700; font-size: 14px; vertical-align: middle; }
+  textarea, input.text-field {
     width: 100%; background: var(--paper-warm); color: var(--ink);
     border: 1px solid var(--line); border-radius: 8px;
     padding: 10px 12px; font-size: 16px; font-family: inherit;
-    min-height: 80px; resize: vertical; margin-top: 10px;
+    resize: vertical; margin-top: 6px;
   }
-  .field-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin: 14px 0 6px; display: block; }
+  textarea { min-height: 80px; }
+  .field-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin: 16px 0 6px; display: block; }
+  .amazon-link {
+    display: inline-block; margin-top: 4px;
+    background: var(--accent); color: var(--btn-text);
+    border: 1px solid var(--accent-deep); border-radius: 8px;
+    padding: 10px 16px; font-size: 13px; font-weight: 700; text-decoration: none;
+  }
+  .amazon-link:hover { filter: brightness(1.06); }
+
+  .similar-strip { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
+  .sim-card { width: 92px; flex-shrink: 0; }
+  .sim-card .cover-wrap { width: 92px; }
+  .sim-card .sim-title { font-size: 11px; font-weight: 600; line-height: 1.2; margin-top: 5px; display: block; }
+  .sim-card .btn { margin-top: 5px; width: 100%; }
 
   .modal-bg {
-    display: none; position: fixed; inset: 0; background: rgba(35,35,35,0.45);
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     z-index: 50; padding: 16px; overflow-y: auto;
   }
   .modal-bg.open { display: flex; align-items: flex-start; justify-content: center; }
   .modal {
     background: var(--paper); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: 0 12px 40px rgba(35,35,35,.25);
-    padding: 24px; max-width: 640px; width: 100%; margin-top: 4vh;
+    border-radius: var(--radius); box-shadow: 0 12px 40px rgba(0,0,0,.3);
+    padding: 24px; max-width: 680px; width: 100%; margin-top: 4vh;
   }
   .modal-close { float: right; background: none; border: none; color: var(--ink-soft); font-size: 24px; cursor: pointer; }
   .modal-close:hover { color: var(--ink); }
+  .modal h3.mh { font-family: "Bookerly", Charter, Georgia, serif; font-size: 20px; margin-bottom: 14px; }
 
-  /* ---------- Recs ---------- */
+  /* ---------- Recs / browse rows ---------- */
   .rec-card {
     background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
-    box-shadow: var(--card-shadow);
+    box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
     padding: 16px; margin-bottom: 14px; display: flex; gap: 14px; align-items: flex-start;
   }
   .rec-card .cover-wrap { width: 72px; flex-shrink: 0; }
   .rec-card h4 { font-size: 16px; font-family: "Bookerly", Charter, Georgia, serif; }
   .rec-card .rec-author { color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
-  .rec-card .rec-why { font-size: 13px; line-height: 1.5; color: var(--teal); }
-  .rec-card .rec-add { margin-top: 8px; }
+  .rec-card .rec-why { font-size: 13px; line-height: 1.5; color: var(--accent-2); }
+  .rec-card .rec-add { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
   .spinner {
     display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line);
-    border-top-color: var(--orange); border-radius: 50%; animation: spin .7s linear infinite;
+    border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;
     vertical-align: middle; margin-right: 8px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ---------- Profile ---------- */
+  .profile-head { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+  .profile-head .pname { font-family: "Bookerly", Charter, Georgia, serif; font-size: 24px; font-weight: 700; }
+  .profile-head .pmail { font-size: 13px; color: var(--ink-soft); }
+  .avatar-picker { display: flex; gap: 8px; flex-wrap: wrap; }
+  .avatar-opt {
+    width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--line);
+    background: var(--paper); font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .avatar-opt:hover { border-color: var(--ink-soft); }
+  .avatar-opt.on { border-color: var(--accent-deep); box-shadow: 0 0 0 2px var(--accent); }
+  .avatar-hint { font-size: 12px; color: var(--ink-soft); margin-top: 8px; }
+
+  .top5-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px 0 8px; -webkit-overflow-scrolling: touch; }
+  .top5-slot { width: 104px; flex-shrink: 0; text-align: center; }
+  .top5-slot .cover-wrap { width: 104px; cursor: pointer; }
+  .top5-slot .cover-wrap.empty-slot {
+    display: flex; align-items: center; justify-content: center;
+    border: 2px dashed var(--line); background: var(--paper); box-shadow: none;
+    color: var(--ink-soft); font-size: 26px;
+  }
+  .top5-slot .slot-num { font-size: 11px; font-weight: 800; color: var(--accent-deep); margin-bottom: 4px; display: block; }
+  .top5-slot .slot-title { font-size: 11px; font-weight: 600; margin-top: 5px; line-height: 1.2; display: block; }
+  .top5-slot .link-btn { font-size: 11px; }
+
+  .friend-row {
+    width: 100%; display: flex; align-items: center; gap: 12px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 12px 14px; margin-bottom: 10px; cursor: pointer; text-align: left; color: var(--ink);
+  }
+  .friend-row:hover { border-color: var(--accent); }
+  .friend-row .fname { font-weight: 700; font-size: 15px; }
+  .friend-row .fmeta { font-size: 12px; color: var(--ink-soft); }
+  .friend-row .fx { margin-left: auto; }
+
+  .picker-list { max-height: 50vh; overflow-y: auto; }
+  .picker-item {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 10px; margin-bottom: 8px; cursor: pointer; text-align: left; color: var(--ink);
+  }
+  .picker-item:hover { border-color: var(--accent); }
+  .picker-item .cover-wrap { width: 36px; box-shadow: none; }
+  .picker-item .pt { font-size: 13px; font-weight: 600; }
+  .picker-item .pa { font-size: 11px; color: var(--ink-soft); }
+
   /* ---------- Share ---------- */
   .share-card {
-    background: var(--paper);
-    border: 1px solid var(--line); border-radius: var(--radius);
-    border-top: 6px solid var(--orange);
-    box-shadow: var(--card-shadow);
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    border-top: 6px solid var(--accent);
+    box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
     padding: 28px; max-width: 520px;
   }
   .share-card h3 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 22px; margin-bottom: 4px; }
@@ -255,12 +360,59 @@
   .share-row:last-child { border-bottom: none; }
   .share-row .st { font-size: 14px; font-weight: 600; }
   .share-row .sa { font-size: 12px; color: var(--ink-soft); }
-  .share-row .ss { color: var(--orange-deep); font-size: 13px; white-space: nowrap; }
+  .share-row .ss { color: var(--accent-deep); font-size: 13px; white-space: nowrap; }
   pre.share-text {
     background: var(--paper-shade); border: 1px solid var(--line); border-radius: 8px;
     padding: 14px; font-size: 13px; white-space: pre-wrap; margin: 14px 0;
     color: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace;
   }
+
+  /* ---------- Settings ---------- */
+  .theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .theme-card {
+    background: var(--paper); border: 2px solid var(--line); border-radius: var(--radius);
+    padding: 14px; cursor: pointer; text-align: left; color: var(--ink);
+  }
+  .theme-card:hover { border-color: var(--ink-soft); }
+  .theme-card.on { border-color: var(--accent-deep); box-shadow: 0 0 0 2px var(--accent); }
+  .theme-card .tname { font-weight: 700; font-size: 14px; margin-bottom: 3px; }
+  .theme-card .temblem { float: right; font-size: 16px; }
+  .theme-card .tdesc { font-size: 11px; color: var(--ink-soft); margin-bottom: 10px; min-height: 28px; }
+  .swatches { display: flex; gap: 6px; }
+  .swatch { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
+
+  .toggle-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 18px; margin-bottom: 22px; max-width: 420px;
+  }
+  .toggle-row .tl { font-weight: 700; font-size: 15px; }
+  .toggle-row .ts { font-size: 12px; color: var(--ink-soft); }
+  .switch { position: relative; width: 54px; height: 30px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 100%; height: 100%; position: absolute; cursor: pointer; z-index: 2; margin: 0; }
+  .slider {
+    position: absolute; inset: 0; background: var(--paper-shade);
+    border: 1px solid var(--line); border-radius: 30px; transition: background .2s ease;
+  }
+  .slider::before {
+    content: '\2600\FE0F'; position: absolute; left: 3px; top: 2px;
+    width: 24px; height: 24px; border-radius: 50%; background: var(--paper);
+    box-shadow: 0 1px 4px rgba(0,0,0,.3);
+    display: flex; align-items: center; justify-content: center; font-size: 13px;
+    transition: transform .2s ease;
+  }
+  .switch input:checked + .slider { background: var(--accent); }
+  .switch input:checked + .slider::before { transform: translateX(23px); content: '\1F319'; }
+  .switch input:focus-visible + .slider { outline: 2px solid var(--accent-deep); }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 600;
+    padding: 12px 20px; border-radius: 30px; opacity: 0; transition: all .25s ease; z-index: 99;
+    pointer-events: none; max-width: 90vw; text-align: center;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
   @media (max-width: 520px) {
     .grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
     .detail .cover-wrap { width: 130px; }
@@ -271,7 +423,7 @@
 
 <!-- ============ SIGN IN ============ -->
 <section id="signin">
-  <div class="book-mark">📖</div>
+  <div class="book-mark">&#128214;</div>
   <h1>Shelf<em>d</em></h1>
   <p>Scan it. Shelve it. Rate it.<br>Sign in with your email to open your shelf.</p>
   <div class="signin-card">
@@ -291,7 +443,7 @@
 <header>
   <div class="header-inner">
     <div>
-      <div class="logo">Shelf<em>d</em></div>
+      <div class="logo">Shelf<em>d</em><span class="emblem" id="themeEmblem"></span></div>
       <div class="tagline">Scan it. Shelve it. Rate it.</div>
     </div>
     <div class="whoami">
@@ -307,9 +459,11 @@
 <nav>
   <div class="nav-inner">
     <button class="tab active" data-view="library" onclick="showView('library')">Library</button>
-    <button class="tab" data-view="add" onclick="showView('add')">+ Add a book</button>
-    <button class="tab" data-view="recs" onclick="showView('recs')">Recommendations</button>
-    <button class="tab" data-view="share" onclick="showView('share')">Share</button>
+    <button class="tab" data-view="wishlist" onclick="showView('wishlist')">Wishlist</button>
+    <button class="tab" data-view="add" onclick="showView('add')">+ Add</button>
+    <button class="tab" data-view="recs" onclick="showView('recs')">For you</button>
+    <button class="tab" data-view="profile" onclick="showView('profile')">Profile</button>
+    <button class="tab" data-view="settings" onclick="showView('settings')">Settings</button>
   </div>
 </nav>
 
@@ -319,19 +473,42 @@
   <section id="view-library" class="view active">
     <div class="shelf-stats" id="shelfStats"></div>
     <div class="toolbar">
-      <input type="text" class="search-input" id="searchInput" placeholder="Search your shelf…" oninput="renderLibrary()">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search your shelf&hellip;" oninput="renderLibrary()">
+      <select id="groupSelect" onchange="renderLibrary()">
+        <option value="none">No grouping</option>
+        <option value="author">Group by author</option>
+        <option value="series">Group by series</option>
+        <option value="theme">Group by theme</option>
+      </select>
+      <select id="ownFilter" onchange="renderLibrary()">
+        <option value="all">Owned + borrowed</option>
+        <option value="own">Owned only</option>
+        <option value="borrow">Borrowed only</option>
+      </select>
       <select id="sortSelect" onchange="renderLibrary()">
         <option value="added">Recently added</option>
         <option value="rating">Highest rated</option>
-        <option value="title">Title A–Z</option>
-        <option value="author">Author A–Z</option>
+        <option value="title">Title A&ndash;Z</option>
+        <option value="author">Author A&ndash;Z</option>
       </select>
     </div>
-    <div id="libraryGrid" class="grid"></div>
+    <div id="libraryGrid"></div>
     <div id="libraryEmpty" class="empty" style="display:none">
-      <div class="big">📚</div>
+      <div class="big">&#128218;</div>
       <p><strong>Your shelf is empty.</strong></p>
-      <p style="margin-top:6px">Hit <b>+ Add a book</b> and scan the barcode on the back of any book.</p>
+      <p style="margin-top:6px">Hit <b>+ Add</b> and scan the barcode on the back of any book.</p>
+    </div>
+  </section>
+
+  <!-- ============ WISHLIST ============ -->
+  <section id="view-wishlist" class="view">
+    <h2>Wishlist</h2>
+    <p class="sub">Books you want. Tap one for the blurb and a link to buy it.</p>
+    <div id="wishlistGrid" class="grid"></div>
+    <div id="wishlistEmpty" class="empty" style="display:none">
+      <div class="big">&#128278;</div>
+      <p><strong>Nothing on your wishlist yet.</strong></p>
+      <p style="margin-top:6px">When adding a book, pick <b>Wishlist</b> instead of Own &mdash; it'll land here.</p>
     </div>
   </section>
 
@@ -342,7 +519,7 @@
 
     <div class="panel">
       <div class="row" style="justify-content:center">
-        <button class="btn" id="scanBtn" onclick="toggleScanner()">📷 Start scanning</button>
+        <button class="btn" id="scanBtn" onclick="toggleScanner()">&#128247; Start scanning</button>
       </div>
       <div id="reader"></div>
       <p class="scan-hint" id="scanHint"></p>
@@ -359,8 +536,14 @@
 
     <div class="panel" id="previewPanel" style="display:none">
       <div class="detail" id="previewDetail"></div>
+      <span class="field-label">How do you have it?</span>
+      <div class="chips" id="statusChips">
+        <button class="chip on" data-s="own" onclick="pickStatus('own')">&#10003; I own it</button>
+        <button class="chip" data-s="borrow" onclick="pickStatus('borrow')">&#8617; Borrowed</button>
+        <button class="chip" data-s="wishlist" onclick="pickStatus('wishlist')">&#128278; Wishlist</button>
+      </div>
       <div class="row" style="margin-top:18px">
-        <button class="btn" onclick="addPreviewToLibrary()">Add to my library</button>
+        <button class="btn" onclick="addPreviewToLibrary()">Add it</button>
         <button class="btn ghost" onclick="clearPreview()">Cancel</button>
       </div>
     </div>
@@ -370,19 +553,70 @@
   <section id="view-recs" class="view">
     <h2>Recommended for you</h2>
     <p class="sub">Pulled from the genres of your highest-rated books. Most are on Libby (free with a library card) or Kindle.</p>
-    <button class="btn" id="recBtn" onclick="getRecommendations()">✦ Get recommendations</button>
+    <button class="btn" id="recBtn" onclick="getRecommendations()">&#10022; Get recommendations</button>
     <div id="recStatus" class="status"></div>
     <div id="recList" style="margin-top:18px"></div>
   </section>
 
-  <!-- ============ SHARE ============ -->
-  <section id="view-share" class="view">
-    <h2>Share your shelf</h2>
-    <p class="sub">A clean snapshot of your library — copy it and drop it anywhere. Anyone can visit this same link and start their own shelf.</p>
-    <div class="share-card" id="shareCard"></div>
-    <pre class="share-text" id="shareText"></pre>
-    <button class="btn" onclick="copyShare()">Copy to clipboard</button>
-    <span class="status" id="copyStatus" style="display:inline-block;margin-left:10px"></span>
+  <!-- ============ PROFILE ============ -->
+  <section id="view-profile" class="view">
+    <div class="profile-head">
+      <div class="avatar big" id="profileAvatar">?</div>
+      <div>
+        <div class="pname" id="profileName"></div>
+        <div class="pmail" id="profileMail"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <span class="field-label" style="margin-top:0">Pick your character</span>
+      <div class="avatar-picker" id="avatarPicker"></div>
+      <div class="avatar-hint" id="avatarHint"></div>
+    </div>
+
+    <div class="panel">
+      <span class="field-label" style="margin-top:0">My top 5</span>
+      <p class="sub" style="margin:0 0 12px">Tap a slot to pick a book from your shelf. This is what friends see first.</p>
+      <div class="top5-row" id="top5Row"></div>
+    </div>
+
+    <div class="panel">
+      <span class="field-label" style="margin-top:0">Friends</span>
+      <p class="sub" style="margin:0 0 12px">Send your friend link &mdash; when someone opens it, you show up in their friends list and they can browse your shelf and top 5. It's a snapshot, so send a fresh link when your shelf changes.</p>
+      <div class="row">
+        <button class="btn" onclick="copyFriendLink()">&#128279; Copy my friend link</button>
+        <span class="status" id="friendLinkStatus" style="margin-top:0"></span>
+      </div>
+      <div id="friendsList" style="margin-top:16px"></div>
+    </div>
+
+    <div class="panel">
+      <span class="field-label" style="margin-top:0">Share your shelf as text</span>
+      <div class="share-card" id="shareCard" style="box-shadow:none"></div>
+      <pre class="share-text" id="shareText"></pre>
+      <button class="btn ghost" onclick="copyShare()">Copy to clipboard</button>
+      <span class="status" id="copyStatus" style="display:inline-block;margin-left:10px"></span>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="view-settings" class="view">
+    <h2>Settings</h2>
+    <p class="sub">Make it yours.</p>
+
+    <div class="toggle-row">
+      <div>
+        <div class="tl">Dark mode</div>
+        <div class="ts">Flips your current theme to its night version.</div>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="darkToggle" onchange="setDark(this.checked)" aria-label="Dark mode">
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <span class="field-label" style="margin-top:0">Theme</span>
+    <div class="theme-grid" id="themeGrid"></div>
   </section>
 
 </main>
@@ -391,502 +625,8 @@
 <div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modalContent"></div>
 </div>
+<div id="toast"></div>
 
-<script>
-/* ================= ACCOUNTS (email-based profiles on this device) ================= */
-let currentUser = null;   // { name, email }
-let library = [];
-let preview = null;
-let scanner = null;
-let scanning = false;
-
-const USERS_KEY = 'shelfd-users';
-const CURRENT_KEY = 'shelfd-current';
-const shelfKey = email => 'shelfd-shelf-' + email;
-
-function getUsers() {
-  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch(e) { return []; }
-}
-function renderProfiles() {
-  const users = getUsers();
-  const el = document.getElementById('profileList');
-  if (!users.length) { el.innerHTML = ''; return; }
-  el.innerHTML = '<div class="pl">Shelves on this device</div>' + users.map(u => `
-    <button class="profile-row" onclick="quickSignIn('${u.email}')">
-      <div class="avatar">${(u.name || u.email)[0].toUpperCase()}</div>
-      <div><div>${u.name || ''}</div><div class="pe">${u.email}</div></div>
-    </button>`).join('');
-}
-function signIn() {
-  const name = document.getElementById('nameInput').value.trim();
-  const email = document.getElementById('emailInput').value.trim().toLowerCase();
-  const st = document.getElementById('signinStatus');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    st.className = 'status err'; st.textContent = 'Enter a valid email so your shelf has a home.';
-    return;
-  }
-  let users = getUsers();
-  const existing = users.find(u => u.email === email);
-  if (existing) { if (name) existing.name = name; }
-  else users.push({ name: name || email.split('@')[0], email });
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  localStorage.setItem(CURRENT_KEY, email);
-  enterApp(users.find(u => u.email === email));
-}
-function quickSignIn(email) {
-  const u = getUsers().find(x => x.email === email);
-  if (!u) return;
-  localStorage.setItem(CURRENT_KEY, email);
-  enterApp(u);
-}
-function enterApp(user) {
-  currentUser = user;
-  document.getElementById('signin').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('avatar').textContent = (user.name || user.email)[0].toUpperCase();
-  document.getElementById('whoName').textContent = user.name || user.email;
-  loadLibrary();
-}
-function signOut() {
-  if (scanning) stopScanner();
-  localStorage.removeItem(CURRENT_KEY);
-  currentUser = null; library = [];
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('signin').style.display = 'block';
-  renderProfiles();
-}
-
-/* ================= STORAGE ================= */
-function loadLibrary() {
-  try {
-    const raw = localStorage.getItem(shelfKey(currentUser.email));
-    library = raw ? JSON.parse(raw) : [];
-  } catch (e) { library = []; }
-  renderLibrary();
-  renderShare();
-}
-function saveLibrary() {
-  try { localStorage.setItem(shelfKey(currentUser.email), JSON.stringify(library)); }
-  catch (e) { console.error('Save failed', e); }
-}
-
-/* ================= HELPERS ================= */
-function starString(r) {
-  if (!r) return '<span class="unrated">not rated yet</span>';
-  const full = Math.floor(r), half = r % 1 >= 0.5;
-  return '★'.repeat(full) + (half ? '½' : '');
-}
-function esc(s) {
-  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-function coverEl(book) {
-  const wrap = document.createElement('div');
-  wrap.className = 'cover-wrap';
-  const showFallback = () => {
-    wrap.innerHTML = `<div class="cover-fallback"><div class="t">${esc(book.title)}</div><div class="a">${esc(book.author)}</div></div>`;
-  };
-  let url = null;
-  if (book.coverId) url = `https://covers.openlibrary.org/b/id/${book.coverId}-L.jpg`;
-  else if (book.isbn) url = `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg?default=false`;
-  if (url) {
-    const img = document.createElement('img');
-    img.alt = book.title + ' cover';
-    img.loading = 'lazy';
-    img.onerror = showFallback;
-    img.onload = () => { if (img.naturalWidth < 5) showFallback(); };
-    img.src = url;
-    wrap.appendChild(img);
-  } else showFallback();
-  return wrap;
-}
-
-/* ================= LIBRARY VIEW ================= */
-function renderLibrary() {
-  const grid = document.getElementById('libraryGrid');
-  const empty = document.getElementById('libraryEmpty');
-  const q = document.getElementById('searchInput').value.trim().toLowerCase();
-  const sort = document.getElementById('sortSelect').value;
-
-  let books = [...library];
-  if (q) books = books.filter(b => (b.title + ' ' + b.author).toLowerCase().includes(q));
-  if (sort === 'rating') books.sort((a,b) => (b.rating||0) - (a.rating||0));
-  else if (sort === 'title') books.sort((a,b) => a.title.localeCompare(b.title));
-  else if (sort === 'author') books.sort((a,b) => (a.author||'').localeCompare(b.author||''));
-  else books.sort((a,b) => (b.added||0) - (a.added||0));
-
-  const rated = library.filter(b => b.rating);
-  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : '—';
-  document.getElementById('shelfStats').innerHTML = `
-    <div class="stat"><div class="num">${library.length}</div><div class="lbl">Books</div></div>
-    <div class="stat"><div class="num">${rated.length}</div><div class="lbl">Rated</div></div>
-    <div class="stat"><div class="num">${avg}</div><div class="lbl">Avg rating</div></div>`;
-
-  empty.style.display = library.length ? 'none' : 'block';
-  grid.innerHTML = '';
-  books.forEach(b => {
-    const card = document.createElement('button');
-    card.className = 'book-card';
-    card.setAttribute('aria-label', 'Open ' + b.title);
-    card.onclick = () => openBook(b.id);
-    card.appendChild(coverEl(b));
-    const meta = document.createElement('div');
-    meta.className = 'card-meta';
-    meta.innerHTML = `<span class="card-title">${esc(b.title)}</span><div class="card-stars">${starString(b.rating)}</div>`;
-    card.appendChild(meta);
-    grid.appendChild(card);
-  });
-}
-
-/* ================= SCANNER ================= */
-async function toggleScanner() {
-  const btn = document.getElementById('scanBtn');
-  const hint = document.getElementById('scanHint');
-  if (scanning) { await stopScanner(); return; }
-  if (location.protocol === 'file:') {
-    hint.textContent = 'Cameras only work on a real website (https). Open this page from your GitHub Pages link, not as a downloaded file.';
-    return;
-  }
-  try {
-    scanner = new Html5Qrcode('reader', { formatsToSupport: [
-      Html5QrcodeSupportedFormats.EAN_13,
-      Html5QrcodeSupportedFormats.EAN_8,
-      Html5QrcodeSupportedFormats.UPC_A
-    ]});
-    await scanner.start(
-      { facingMode: 'environment' },
-      { fps: 10, qrbox: { width: 260, height: 140 } },
-      async (decoded) => {
-        if (/^97[89]\d{10}$/.test(decoded)) {
-          await stopScanner();
-          hint.textContent = 'Barcode captured: ' + decoded;
-          lookupISBN(decoded);
-        }
-      },
-      () => {}
-    );
-    scanning = true;
-    btn.textContent = '⏹ Stop scanning';
-    hint.textContent = 'Hold the back-cover barcode steady in the box.';
-  } catch (e) {
-    hint.textContent = 'Camera was blocked. Check Settings → Safari (or Chrome) → Camera → Allow, then try again. Or just type the ISBN below.';
-  }
-}
-async function stopScanner() {
-  try { if (scanner) await scanner.stop(); } catch(e) {}
-  scanning = false;
-  document.getElementById('scanBtn').textContent = '📷 Start scanning';
-}
-
-/* ================= LOOKUP (Open Library) ================= */
-function setStatus(msg, cls) {
-  const el = document.getElementById('lookupStatus');
-  el.className = 'status ' + (cls || '');
-  el.innerHTML = msg;
-}
-function lookupManual() {
-  const v = document.getElementById('isbnInput').value.trim();
-  if (!v) return;
-  const digits = v.replace(/[-\s]/g, '');
-  if (/^\d{10}$|^\d{13}$/.test(digits)) lookupISBN(digits);
-  else lookupByTitle(v);
-}
-
-async function lookupISBN(isbn) {
-  setStatus('<span class="spinner"></span>Looking up ' + esc(isbn) + '…');
-  try {
-    const r = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
-    const data = await r.json();
-    const d = data['ISBN:' + isbn];
-    if (!d) throw new Error('not found');
-    showPreview({
-      isbn,
-      title: d.title || 'Unknown title',
-      author: (d.authors || []).map(a => a.name).join(', '),
-      year: (d.publish_date || '').match(/\d{4}/)?.[0] || '',
-      coverId: d.cover ? Number((d.cover.large || d.cover.medium || '').match(/\/id\/(\d+)/)?.[1]) || null : null,
-      subjects: (d.subjects || []).slice(0, 8).map(s => s.name || s)
-    });
-  } catch (e) {
-    setStatus("Couldn't find that ISBN. Double-check the digits, or try the title + author instead.", 'err');
-  }
-}
-
-async function lookupByTitle(text) {
-  setStatus('<span class="spinner"></span>Searching for “' + esc(text) + '”…');
-  try {
-    const r = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(text)}&limit=1&fields=title,author_name,first_publish_year,cover_i,isbn,subject`);
-    const data = await r.json();
-    const d = data.docs && data.docs[0];
-    if (!d) throw new Error('not found');
-    showPreview({
-      isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || (d.isbn || [])[0] || '',
-      title: d.title,
-      author: (d.author_name || []).join(', '),
-      year: d.first_publish_year || '',
-      coverId: d.cover_i || null,
-      subjects: (d.subject || []).slice(0, 8)
-    });
-  } catch (e) {
-    setStatus("No luck finding that. Try adding the author's name.", 'err');
-  }
-}
-
-/* ================= PREVIEW & ADD ================= */
-function showPreview(book) {
-  const dup = library.some(b => (b.isbn && book.isbn && b.isbn === book.isbn) ||
-    (b.title.toLowerCase() === book.title.toLowerCase() && b.author === book.author));
-  setStatus(dup ? 'That one is already on your shelf.' : 'Found it ✓', 'ok');
-  preview = book;
-  const panel = document.getElementById('previewPanel');
-  const det = document.getElementById('previewDetail');
-  det.innerHTML = '';
-  det.appendChild(coverEl(book));
-  const info = document.createElement('div');
-  info.className = 'detail-info';
-  info.innerHTML = `
-    <h3>${esc(book.title)}</h3>
-    <div class="author">${esc(book.author)}${book.year ? ' · ' + esc(book.year) : ''}</div>`;
-  det.appendChild(info);
-  panel.style.display = 'block';
-  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-function clearPreview() {
-  preview = null;
-  document.getElementById('previewPanel').style.display = 'none';
-  setStatus('');
-}
-function addPreviewToLibrary() {
-  if (!preview) return;
-  const existing = library.find(b => b.isbn && preview.isbn && b.isbn === preview.isbn);
-  if (existing) {
-    clearPreview(); showView('library'); openBook(existing.id);
-    return;
-  }
-  const book = { ...preview, id: 'b' + Date.now(), rating: 0, review: '', added: Date.now() };
-  library.push(book);
-  saveLibrary();
-  clearPreview();
-  document.getElementById('isbnInput').value = '';
-  renderLibrary(); renderShare();
-  showView('library');
-  openBook(book.id);
-}
-
-/* ================= DETAIL MODAL ================= */
-function starSVG(pct, uid) {
-  const path = 'M15 2.5l3.7 7.9 8.6 1.1-6.3 6 1.6 8.5L15 21.9 7.4 26l1.6-8.5-6.3-6 8.6-1.1z';
-  return `<svg viewBox="0 0 30 30" aria-hidden="true">
-    <path d="${path}" fill="rgba(35,35,35,0.14)"/>
-    <clipPath id="clip${uid}"><rect width="${30*pct/100}" height="30"/></clipPath>
-    <path d="${path}" fill="#ff9900" clip-path="url(#clip${uid})"/>
-  </svg>`;
-}
-function openBook(id) {
-  const b = library.find(x => x.id === id);
-  if (!b) return;
-  const starsHtml = [1,2,3,4,5].map(i => {
-    const fillPct = Math.max(0, Math.min(1, (b.rating || 0) - (i - 1))) * 100;
-    return `<span class="star" onclick="rateClick(event, '${id}', ${i})" title="${i} star${i>1?'s':''}">${starSVG(Math.round(fillPct), id + '-' + i)}</span>`;
-  }).join('');
-  const mc = document.getElementById('modalContent');
-  mc.innerHTML = `
-    <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
-    <div class="detail">
-      <div id="modalCover"></div>
-      <div class="detail-info">
-        <h3>${esc(b.title)}</h3>
-        <div class="author">${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</div>
-        <span class="field-label">Your rating <span style="text-transform:none;letter-spacing:0">(tap left/right half of a star)</span></span>
-        <div class="stars">${starsHtml}</div>
-        <span class="rating-label">${b.rating ? b.rating + ' / 5' : ''}</span>
-        <span class="field-label">Your review</span>
-        <textarea id="reviewBox" placeholder="What'd you think?">${esc(b.review || '')}</textarea>
-        <div class="row" style="margin-top:14px">
-          <button class="btn" onclick="saveReview('${id}')">Save</button>
-          <button class="btn danger" onclick="removeBook('${id}')">Remove from shelf</button>
-        </div>
-      </div>
-    </div>`;
-  mc.querySelector('#modalCover').replaceWith(coverEl(b));
-  document.getElementById('modalBg').classList.add('open');
-}
-function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
-function rateClick(ev, id, starIndex) {
-  const b = library.find(x => x.id === id);
-  const rect = ev.currentTarget.getBoundingClientRect();
-  const half = (ev.clientX - rect.left) < rect.width / 2;
-  let newRating = starIndex - (half ? 0.5 : 0);
-  if (b.rating === newRating) newRating = 0;
-  b.rating = newRating;
-  saveLibrary();
-  openBook(id); renderLibrary(); renderShare();
-}
-function saveReview(id) {
-  const b = library.find(x => x.id === id);
-  b.review = document.getElementById('reviewBox').value;
-  saveLibrary();
-  closeModal(); renderLibrary(); renderShare();
-}
-function removeBook(id) {
-  library = library.filter(x => x.id !== id);
-  saveLibrary();
-  closeModal(); renderLibrary(); renderShare();
-}
-
-/* ================= RECOMMENDATIONS ================= */
-const SKIP_SUBJECTS = ['accessible book','protected daisy','in library','overdrive','fiction','large type books','new york times bestseller'];
-async function getRecommendations() {
-  const status = document.getElementById('recStatus');
-  const list = document.getElementById('recList');
-  const btn = document.getElementById('recBtn');
-  if (!library.length) {
-    status.className = 'status err';
-    status.textContent = 'Add and rate a few books first so there is something to go on.';
-    return;
-  }
-  btn.disabled = true;
-  status.className = 'status';
-  status.innerHTML = '<span class="spinner"></span>Reading your shelf…';
-  list.innerHTML = '';
-  try {
-    const ranked = [...library].sort((a,b) => (b.rating||3) - (a.rating||3));
-    const subjectScore = {};
-    ranked.forEach((b, idx) => {
-      const weight = (b.rating || 3) * (1 - idx * 0.05);
-      (b.subjects || []).forEach(s => {
-        const key = String(s).toLowerCase();
-        if (SKIP_SUBJECTS.includes(key)) return;
-        subjectScore[key] = (subjectScore[key] || 0) + weight;
-      });
-    });
-    const topSubjects = Object.entries(subjectScore).sort((a,b) => b[1]-a[1]).slice(0, 3).map(e => e[0]);
-    const ownedTitles = new Set(library.map(b => b.title.toLowerCase()));
-    const recs = [];
-    const seen = new Set();
-    if (topSubjects.length) {
-      for (const subj of topSubjects) {
-        const r = await fetch(`https://openlibrary.org/search.json?q=subject:"${encodeURIComponent(subj)}"&sort=rating&limit=8&fields=title,author_name,cover_i,first_publish_year,isbn`);
-        const data = await r.json();
-        for (const d of (data.docs || [])) {
-          const key = d.title.toLowerCase();
-          if (ownedTitles.has(key) || seen.has(key) || !d.cover_i) continue;
-          seen.add(key);
-          recs.push({
-            title: d.title,
-            author: (d.author_name || []).join(', '),
-            year: d.first_publish_year || '',
-            coverId: d.cover_i,
-            isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || '',
-            why: `Because you rated books tagged “${subj}” highly.`
-          });
-          if (recs.length >= 8) break;
-        }
-        if (recs.length >= 8) break;
-      }
-    }
-    if (!recs.length) {
-      const topAuthor = (ranked[0].author || '').split(',')[0].trim();
-      if (topAuthor) {
-        const r = await fetch(`https://openlibrary.org/search.json?q=author:"${encodeURIComponent(topAuthor)}"&sort=rating&limit=10&fields=title,author_name,cover_i,first_publish_year,isbn`);
-        const data = await r.json();
-        for (const d of (data.docs || [])) {
-          const key = d.title.toLowerCase();
-          if (ownedTitles.has(key) || seen.has(key) || !d.cover_i) continue;
-          seen.add(key);
-          recs.push({
-            title: d.title, author: (d.author_name || []).join(', '),
-            year: d.first_publish_year || '', coverId: d.cover_i,
-            isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || '',
-            why: `More from ${topAuthor}, your top-rated author.`
-          });
-          if (recs.length >= 8) break;
-        }
-      }
-    }
-    if (!recs.length) throw new Error('empty');
-    status.textContent = '';
-    recs.forEach(rec => {
-      const card = document.createElement('div');
-      card.className = 'rec-card';
-      card.appendChild(coverEl(rec));
-      const info = document.createElement('div');
-      info.innerHTML = `
-        <h4>${esc(rec.title)}</h4>
-        <div class="rec-author">${esc(rec.author)}${rec.year ? ' · ' + rec.year : ''}</div>
-        <div class="rec-why">${esc(rec.why)}</div>
-        <div class="rec-add"><button class="btn ghost">+ Add to shelf</button></div>`;
-      info.querySelector('button').onclick = () => {
-        preview = { isbn: rec.isbn, title: rec.title, author: rec.author, year: rec.year, coverId: rec.coverId, subjects: [] };
-        addPreviewToLibrary();
-      };
-      card.appendChild(info);
-      list.appendChild(card);
-    });
-  } catch (e) {
-    status.className = 'status err';
-    status.textContent = "Couldn't build recommendations right now. Rate a couple more books and try again.";
-  }
-  btn.disabled = false;
-}
-
-/* ================= SHARE ================= */
-function renderShare() {
-  const card = document.getElementById('shareCard');
-  const txt = document.getElementById('shareText');
-  if (!library.length) {
-    card.innerHTML = '<h3>Nothing to share yet</h3><div class="sc-sub">Add some books and come back.</div>';
-    txt.textContent = '';
-    return;
-  }
-  const rated = [...library].filter(b => b.rating).sort((a,b) => b.rating - a.rating);
-  const top = (rated.length ? rated : library).slice(0, 5);
-  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : null;
-  card.innerHTML = `
-    <h3>${esc(currentUser.name)}'s shelf</h3>
-    <div class="sc-sub">${library.length} book${library.length===1?'':'s'}${avg ? ' · ' + avg + '★ average' : ''}</div>
-    ${top.map(b => `
-      <div class="share-row">
-        <div><div class="st">${esc(b.title)}</div><div class="sa">${esc(b.author)}</div></div>
-        <div class="ss">${b.rating ? starString(b.rating) : ''}</div>
-      </div>`).join('')}`;
-  const lines = [`📚 ${currentUser.name}'s shelf — ${library.length} books${avg ? `, ${avg}★ avg` : ''}`, ''];
-  [...library].sort((a,b)=>(b.rating||0)-(a.rating||0)).forEach(b => {
-    lines.push(`${b.rating ? starString(b.rating).replace(/<[^>]*>/g,'') : '·'}  ${b.title} — ${b.author}`);
-  });
-  lines.push('', 'Start your own shelf: ' + location.href.split('#')[0]);
-  txt.textContent = lines.join('\n');
-}
-async function copyShare() {
-  const txt = document.getElementById('shareText').textContent;
-  const status = document.getElementById('copyStatus');
-  try {
-    await navigator.clipboard.writeText(txt);
-    status.className = 'status ok'; status.textContent = 'Copied ✓';
-  } catch (e) {
-    const range = document.createRange();
-    range.selectNodeContents(document.getElementById('shareText'));
-    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-    status.textContent = 'Press Ctrl/Cmd+C to copy';
-  }
-  setTimeout(() => status.textContent = '', 2500);
-}
-
-/* ================= NAV ================= */
-function showView(name) {
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
-  document.getElementById('view-' + name).classList.add('active');
-  if (name !== 'add' && scanning) stopScanner();
-  if (name === 'share') renderShare();
-}
-
-/* ================= BOOT ================= */
-(function boot() {
-  const cur = localStorage.getItem(CURRENT_KEY);
-  const u = cur && getUsers().find(x => x.email === cur);
-  if (u) enterApp(u);
-  else renderProfiles();
-})();
-</script>
+<script src="app.js"></script>
 </body>
 </html>
