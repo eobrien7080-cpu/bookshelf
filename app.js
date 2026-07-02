@@ -371,12 +371,15 @@ function renderShelfStats(books) {
   const owned = books.filter(book => book.status === 'own').length;
   const borrowed = books.filter(book => book.status === 'borrow').length;
   const wishlist = books.filter(book => book.status === 'wishlist').length;
+  const ratedBooks = books.filter(book => Number(book.rating) > 0);
+  const averageRating = ratedBooks.length ? (ratedBooks.reduce((sum, book) => sum + Number(book.rating), 0) / ratedBooks.length).toFixed(1) : '—';
   const stats = $('shelfStats');
   stats.innerHTML = `
     <div class="stat"><div class="num">${total}</div><div class="lbl">Shelf total</div></div>
     <div class="stat"><div class="num">${owned}</div><div class="lbl">Owned</div></div>
     <div class="stat"><div class="num">${borrowed}</div><div class="lbl">Borrowed</div></div>
     <div class="stat"><div class="num">${wishlist}</div><div class="lbl">Wishlist</div></div>
+    <div class="stat"><div class="num">${averageRating}</div><div class="lbl">Avg rating</div></div>
   `;
 }
 
@@ -403,13 +406,42 @@ function createBookCard(book) {
 }
 
 function renderRating(rating) {
-  if (!rating) return '<span class="unrated">No rating</span>';
-  return '★'.repeat(Math.min(5, rating));
+  const value = Math.max(0, Math.min(5, Number(rating) || 0));
+  if (!value) return '<span class="unrated">Not rated</span>';
+  const stars = Array.from({ length: 5 }, (_, index) => {
+    const fill = Math.max(0, Math.min(1, value - index));
+    return `<span class="star-icon" style="--fill:${fill.toFixed(2)}"><span class="star-bg">☆</span><span class="star-fg">★</span></span>`;
+  }).join('');
+  return `<span class="rating-stars" aria-label="${value.toFixed(1)} out of 5 stars">${stars}</span>`;
 }
 
 function buildAmazonUrl(book) {
   const query = book.isbn ? `${book.isbn} ${book.title} ${book.author}` : `${book.title} ${book.author}`;
   return `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
+}
+
+function renderRatingEditor(book) {
+  return `
+    <div class="rating-editor">
+      <div class="rating-row">
+        <div class="rating-stars">${renderRating(book.rating)}</div>
+        <span class="rating-readout">${Number(book.rating) > 0 ? `${Number(book.rating).toFixed(1)} / 5` : 'Not rated yet'}</span>
+      </div>
+      <input class="rating-range" type="range" min="0" max="5" step="0.5" value="${Number(book.rating) || 0}" onchange="setBookRating('${book.id}', parseFloat(this.value))">
+      <div class="rating-scale"><span>0</span><span>2.5</span><span>5</span></div>
+    </div>
+  `;
+}
+
+function setBookRating(bookId, rating) {
+  const book = state.user?.books.find(item => item.id === bookId);
+  if (!book) return;
+  const normalized = Math.max(0, Math.min(5, Number(rating) || 0));
+  book.rating = Math.round(normalized * 10) / 10;
+  saveCurrentUser();
+  renderLibrary();
+  renderWishlist();
+  openBookModal(bookId);
 }
 
 function renderWishlist() {
@@ -438,6 +470,8 @@ function openBookModal(bookId) {
         <div class="author">${book.author}</div>
         ${book.series ? `<div class="series-line">Series: ${book.series}</div>` : ''}
         <div class="blurb">${book.blurb || 'No description available.'}</div>
+        <div class="field-label">Your rating</div>
+        ${renderRatingEditor(book)}
         <div class="row" style="margin-top:16px">
           <a class="btn ghost" href="${buildAmazonUrl(book)}" target="_blank" rel="noreferrer">View on Amazon</a>
         </div>
@@ -881,6 +915,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 window.updateBookStatus = updateBookStatus;
+window.setBookRating = setBookRating;
 window.chooseTopFive = chooseTopFive;
 window.closeModal = closeModal;
 window.signIn = signIn;
