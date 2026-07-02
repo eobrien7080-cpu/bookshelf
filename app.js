@@ -206,7 +206,6 @@ function signIn() {
 
   state.user = getOrCreateUser(name, email);
   saveCurrentUser();
-  saveCurrentUser();
   state.user = getCurrentUser();
   loadProfiles();
   showApp();
@@ -231,22 +230,6 @@ function showApp() {
   renderRecommendationsSummary();
   setDark(state.user.dark);
   applyTheme(state.user.theme);
-}
-
-function setDark(isDark) {
-  if (!state.user) return;
-  state.user.dark = !!isDark;
-  const root = document.documentElement;
-  if (state.user.dark) {
-    root.dataset.theme = 'dark';
-    document.body.dataset.theme = 'dark';
-  } else {
-    delete root.dataset.theme;
-    delete document.body.dataset.theme;
-  }
-  const toggle = $('darkToggle');
-  if (toggle) toggle.checked = state.user.dark;
-  saveCurrentUser();
 }
 
 function getAvatarInitials(name) {
@@ -316,7 +299,8 @@ function renderLibrary() {
     if (filter === 'own' && book.status !== 'own') return false;
     if (filter === 'borrow' && book.status !== 'borrow') return false;
     if (!query) return true;
-  return [book.title, book.author, book.series, book.theme, book.isbn, book.status].some(value =>
+    return [book.title, book.author, book.series, book.theme, book.isbn, book.status].some(value =>
+      String(value || '').toLowerCase().includes(query)
     );
   });
 
@@ -329,6 +313,8 @@ function renderLibrary() {
   } else {
     books.sort((a, b) => b.addedAt - a.addedAt);
   }
+
+  renderShelfStats(state.user.books);
 
   const grid = $('libraryGrid');
   grid.innerHTML = '';
@@ -366,8 +352,6 @@ function renderLibrary() {
     grid.className = 'grid';
     books.forEach(book => grid.appendChild(createBookCard(book)));
   }
-
-  renderShelfStats(books);
 }
 
 function renderShelfStats(books) {
@@ -378,6 +362,7 @@ function renderShelfStats(books) {
   const ratedBooks = books.filter(book => Number(book.rating) > 0);
   const averageRating = ratedBooks.length ? (ratedBooks.reduce((sum, book) => sum + Number(book.rating), 0) / ratedBooks.length).toFixed(1) : '—';
   const stats = $('shelfStats');
+  if (!stats) return;
   stats.innerHTML = `
     <div class="stat"><div class="num">${total}</div><div class="lbl">Shelf total</div></div>
     <div class="stat"><div class="num">${owned}</div><div class="lbl">Owned</div></div>
@@ -648,14 +633,40 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
+function normalizeIsbnKey(isbn) {
+  return String(isbn || '').replace(/[^0-9Xx]/g, '').toUpperCase();
+}
+
+function isSameBook(a, b) {
+  const ia = normalizeIsbnKey(a.isbn);
+  const ib = normalizeIsbnKey(b.isbn);
+  if (ia && ib && (ia.length === 10 || ia.length === 13) && ia === ib) return true;
+  return String(a.title || '').trim().toLowerCase() === String(b.title || '').trim().toLowerCase()
+    && String(a.author || '').trim().toLowerCase() === String(b.author || '').trim().toLowerCase();
+}
+
+function findExistingBook(book) {
+  if (!state.user) return null;
+  return state.user.books.find(existing => isSameBook(existing, book)) || null;
+}
+
 function addBookToLibrary(book, options = {}) {
   if (!book || !state.user) {
     if (options.showToast !== false) showToast('No book is ready to add.');
     return null;
   }
 
+  // Don't add the same book twice.
+  const existing = findExistingBook(book);
+  if (existing) {
+    if (options.showToast !== false) showToast(`“${existing.title}” is already on your shelf.`);
+    clearPreview();
+    return existing;
+  }
+
   const normalized = {
     ...book,
+    id: book.id || `book-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     status: book.status || state.currentStatus,
     rating: Number(book.rating) || 0,
     theme: book.theme || '',
@@ -667,7 +678,7 @@ function addBookToLibrary(book, options = {}) {
   saveCurrentUser();
   renderLibrary();
   renderWishlist();
-  if (options.showToast !== false) showToast('Book added to your shelf.');
+  if (options.showToast !== false) showToast(`Added “${normalized.title}” to your shelf.`);
   clearPreview();
   return normalized;
 }
@@ -928,8 +939,25 @@ function addRecommendationToWishlist(rec) {
   closeModal();
 }
 
+function shuffle(array) {
+  const copy = array.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+}
+
+function recKey(book) {
+  const isbn = normalizeIsbnKey(book.isbn);
+  if (isbn && (isbn.length === 10 || isbn.length === 13)) return `isbn:${isbn}`;
+  return `${String(book.title || '').trim().toLowerCase()}|${String(book.author || '').trim().toLowerCase()}`;
+}
+
 function dismissRecommendation(rec, recList) {
-  const key = `${rec.title}|${rec.author}`.toLowerCase();
+  const key = recKey(rec);
+  if (!state.shownRecKeys) state.shownRecKeys = new Set();
+  state.shownRecKeys.add(key); // remember it so refresh brings something new
   const card = Array.from(recList.children).find(child => child.dataset.recKey === key);
   if (card) card.remove();
   const remaining = Array.from(recList.children).filter(child => child.dataset.recKey);
@@ -1056,83 +1084,105 @@ function renderRecommendationsSummary(recommendations = state.recommendations) {
   `;
 }
 
+function renderRecControls() {
+  const recList = $('recList');
+  const bar = document.createElement('div');
+  bar.className = 'row';
+  bar.style.margin = '0 0 16px';
+  const refresh = document.createElement('button');
+  refresh.type = 'button';
+  refresh.className = 'btn';
+  refresh.innerHTML = '↻ New recommendations';
+  refresh.addEventListener('click', () => getRecommendations());
+  bar.appendChild(refresh);
+  recList.appendChild(bar);
+}
+
 async function getRecommendations() {
   if (!state.user) return;
   const recList = $('recList');
-  $('recStatus').innerHTML = '<span class="spinner"></span>Finding a few picks…';
+  $('recStatus').innerHTML = '<span class="spinner"></span>Searching for books like your favorites…';
   recList.innerHTML = '';
   state.recommendations = [];
+  if (!state.shownRecKeys) state.shownRecKeys = new Set();
 
-  const sourceBooks = state.user.books
-    .filter(book => Number(book.rating) >= 4 && book.status !== 'wishlist')
-    .sort((a, b) => Number(b.rating) - Number(a.rating))
-    .slice(0, 4);
+  // Look at the highest-rated books in the library (fall back to any shelved book).
+  const rated = state.user.books
+    .filter(book => Number(book.rating) > 0 && book.status !== 'wishlist')
+    .sort((a, b) => Number(b.rating) - Number(a.rating));
+  const sourceBooks = (rated.length
+    ? rated
+    : state.user.books.filter(book => book.status !== 'wishlist')
+  ).slice(0, 5);
 
   if (!sourceBooks.length) {
-    $('recStatus').textContent = 'Rate a few books to get personalized recommendations.';
+    $('recStatus').textContent = 'Add and rate a few books first so I have something to go on.';
     return;
   }
 
-  const queries = sourceBooks.flatMap(book => {
-    const items = [];
-    if (book.author) items.push(book.author);
-    if (book.series) items.push(book.series);
-    return items;
-  }).filter(Boolean);
+  // Build a varied set of internet searches from each favorite: genre, author, and series.
+  const queries = [];
+  sourceBooks.forEach(book => {
+    if (book.theme) queries.push({ q: `subject:"${book.theme}"`, why: `it shares the ${book.theme} feel of “${book.title}”` });
+    if (book.author) queries.push({ q: book.author, why: `you rated “${book.title}” by ${book.author} highly` });
+    if (book.series) queries.push({ q: book.series, why: `it continues the ${book.series} series you enjoyed` });
+  });
 
   const recommendations = [];
   const seen = new Set();
 
   try {
-    for (const query of queries) {
+    // Shuffle so each refresh explores different favorites first → fresh picks.
+    for (const query of shuffle(queries)) {
       if (recommendations.length >= 6) break;
-      const matches = await fetchOpenLibraryBooks(query, 3);
-      for (const match of matches) {
-        const key = `${match.title}|${match.author}`.toLowerCase();
+      const matches = await fetchOpenLibraryBooks(query.q, 12);
+      for (const match of shuffle(matches)) {
+        const key = recKey(match);
         if (seen.has(key)) continue;
-        const alreadyOwned = state.user.books.some(book =>
-          book.title === match.title && book.author === match.author
-        );
-        if (alreadyOwned) continue;
-
-        const source = sourceBooks.find(book =>
-          (book.author && match.author && book.author.toLowerCase() === match.author.toLowerCase()) ||
-          (book.series && match.series && book.series.toLowerCase() === match.series.toLowerCase())
-        ) || sourceBooks[0];
-
+        if (state.shownRecKeys.has(key)) continue; // already shown on a previous refresh
+        if (state.user.books.some(book => isSameBook(book, match))) continue; // already in library
         seen.add(key);
         recommendations.push({
           title: match.title,
           author: match.author,
-          why: `Because you rated ${source.title} highly.`,
-          blurb: match.blurb || `A strong fit based on your love of ${source.title}.`,
+          why: `Because ${query.why}.`,
+          blurb: match.blurb || 'A strong match for your taste.',
           cover: match.cover || '',
           isbn: match.isbn || '',
           series: match.series || ''
         });
-
         if (recommendations.length >= 6) break;
       }
     }
 
+    // If refreshing exhausted everything, reset memory and try once more for a fresh batch.
+    if (!recommendations.length && state.shownRecKeys.size) {
+      state.shownRecKeys.clear();
+      return getRecommendations();
+    }
+
     if (!recommendations.length) {
-      const fallback = getFallbackRecommendations(sourceBooks);
+      const fallback = getFallbackRecommendations(sourceBooks)
+        .filter(rec => !state.shownRecKeys.has(recKey(rec)) && !state.user.books.some(book => isSameBook(book, rec)));
       if (!fallback.length) {
-        $('recStatus').textContent = 'No tailored suggestions were found yet.';
+        $('recStatus').textContent = 'No new suggestions right now — try rating a few more books.';
+        renderRecControls();
         return;
       }
       recommendations.push(...fallback);
     }
 
+    recommendations.forEach(rec => state.shownRecKeys.add(recKey(rec)));
     state.recommendations = recommendations;
     renderRecommendationsSummary(recommendations);
     $('recStatus').textContent = '';
+    renderRecControls();
     recommendations.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'rec-card';
-      card.dataset.recKey = `${rec.title}|${rec.author}`.toLowerCase();
+      card.dataset.recKey = recKey(rec);
       card.innerHTML = `
-        <button class="rec-dismiss" type="button" aria-label="Dismiss recommendation" onclick="dismissRecommendation(${JSON.stringify(rec)}, this.closest('#recList'))">×</button>
+        <button class="rec-dismiss" type="button" aria-label="Dismiss recommendation">×</button>
         <div class="cover-wrap">${rec.cover ? `<img src="${rec.cover}" alt="${escapeHtml(rec.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(rec.title)}</div><div class="a">${escapeHtml(rec.author)}</div></div>`}</div>
         <div class="rec-body">
           <h4>${escapeHtml(rec.title)}</h4>
@@ -1144,6 +1194,7 @@ async function getRecommendations() {
           </div>
         </div>
       `;
+      card.querySelector('.rec-dismiss').addEventListener('click', () => dismissRecommendation(rec, recList));
       card.querySelector('.js-view').addEventListener('click', () => openRecommendationModal(rec));
       card.querySelector('.js-wishlist').addEventListener('click', () => addRecommendationToWishlist(rec));
       recList.appendChild(card);
@@ -1166,20 +1217,28 @@ function copyFriendLink() {
   });
 }
 
-function copyShare() {
-  if (!state.user) return;
+function renderShareText() {
+  if (!state.user) return '';
   const lines = [`${state.user.name}'s shelf:`];
   state.user.books.slice(0, 10).forEach((book, index) => {
     lines.push(`${index + 1}. ${book.title} by ${book.author} (${book.status})`);
   });
   const text = lines.join('\n');
+  const card = $('shareCard');
+  const textEl = $('shareText');
+  if (card) card.innerHTML = `<h3>Share text</h3><div class="sc-sub">A quick snapshot of your shelf.</div>`;
+  if (textEl) textEl.textContent = text;
+  return text;
+}
+
+function copyShare() {
+  if (!state.user) return;
+  const text = renderShareText();
   navigator.clipboard.writeText(text).then(() => {
     setStatus('copyStatus', 'Copied to clipboard.', 'ok');
   }).catch(() => {
     setStatus('copyStatus', 'Unable to copy.', 'err');
   });
-  $('shareCard').innerHTML = `<h3>Share text</h3><div class="sc-sub">A quick snapshot of your shelf.</div>`;
-  $('shareText').textContent = text;
 }
 
 function setDark(isDark) {
@@ -1262,7 +1321,7 @@ function renderProfile() {
   $('avatarHint').textContent = `Character: ${state.user.avatar}`;
   renderTopFive();
   renderFriendSummary();
-  copyShare();
+  renderShareText();
 }
 
 function renderTopFive() {
@@ -1360,3 +1419,10 @@ window.getRecommendations = getRecommendations;
 window.copyFriendLink = copyFriendLink;
 window.copyShare = copyShare;
 window.setDark = setDark;
+// Also referenced by inline onclick handlers — these were missing, which broke
+// opening a book, removing a book, and dismissing recommendations.
+window.openBookModal = openBookModal;
+window.removeBook = removeBook;
+window.dismissRecommendation = dismissRecommendation;
+window.openRecommendationModal = openRecommendationModal;
+window.addRecommendationToWishlist = addRecommendationToWishlist;
