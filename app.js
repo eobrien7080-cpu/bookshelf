@@ -853,6 +853,63 @@ function dismissRecommendation(rec, recList) {
   }
 }
 
+function getFallbackRecommendations(sourceBooks) {
+  const fallbackMap = [
+    {
+      matches: ['rowling', 'potter', 'harry', 'wizard'],
+      recs: [
+        { title: 'The Hobbit', author: 'J.R.R. Tolkien', why: 'A classic fantasy adventure with a warm, mythic feel.', blurb: 'A timeless fantasy adventure about courage, friendship, and a treasure-filled quest.' },
+        { title: 'A Wizard of Earthsea', author: 'Ursula K. Le Guin', why: 'A thoughtful fantasy with deep world-building and personal growth.', blurb: 'A beautifully written fantasy about power, identity, and the cost of magic.' }
+      ]
+    },
+    {
+      matches: ['tolkien', 'hobbit', 'lotr', 'middle-earth'],
+      recs: [
+        { title: 'The Name of the Wind', author: 'Patrick Rothfuss', why: 'A lyrical fantasy with memorable characters and rich atmosphere.', blurb: 'An immersive fantasy tale about music, legend, and the hidden life of a gifted young man.' },
+        { title: 'Mistborn', author: 'Brandon Sanderson', why: 'A gripping fantasy with inventive magic and quick momentum.', blurb: 'A fast-paced fantasy epic built around a unique magic system and rebellion.' }
+      ]
+    },
+    {
+      matches: ['herbert', 'dune', 'science', 'sci-fi', 'future'],
+      recs: [
+        { title: 'The Left Hand of Darkness', author: 'Ursula K. Le Guin', why: 'A thoughtful science-fiction classic with emotional depth.', blurb: 'A landmark sci-fi novel about politics, identity, and the search for understanding.' },
+        { title: 'The Expanse: Leviathan Wakes', author: 'James S. A. Corey', why: 'A modern space-opera adventure with strong character drama.', blurb: 'An exciting space opera that blends mystery, politics, and survival.' }
+      ]
+    },
+    {
+      matches: ['morgenstern', 'fantasy', 'magic', 'circus'],
+      recs: [
+        { title: 'The Bear and the Nightingale', author: 'Katherine Arden', why: 'A lush fantasy with folklore, atmosphere, and wonder.', blurb: 'A spellbinding historical fantasy rooted in Russian folklore and winter magic.' },
+        { title: 'Circe', author: 'Madeline Miller', why: 'A lyrical reimagining full of myth, power, and transformation.', blurb: 'A rich mythic novel about a woman who becomes more than the stories told about her.' }
+      ]
+    },
+    {
+      matches: ['mccarthy', 'classic', 'literary'],
+      recs: [
+        { title: 'The Road', author: 'Cormac McCarthy', why: 'A spare, powerful novel with emotional weight and clarity.', blurb: 'A haunting literary novel about survival, tenderness, and the human spirit.' },
+        { title: 'Never Let Me Go', author: 'Kazuo Ishiguro', why: 'A quietly devastating literary novel with a strong emotional core.', blurb: 'A beautiful, unsettling story about memory, love, and what it means to be human.' }
+      ]
+    }
+  ];
+
+  const recs = [];
+  const seen = new Set();
+  sourceBooks.forEach(book => {
+    const haystack = `${book.title} ${book.author}`.toLowerCase();
+    const match = fallbackMap.find(entry => entry.matches.some(token => haystack.includes(token)));
+    if (!match) return;
+
+    match.recs.forEach(rec => {
+      const key = `${rec.title}|${rec.author}`.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      recs.push({ ...rec, cover: '', isbn: '', series: '' });
+    });
+  });
+
+  return recs.slice(0, 6);
+}
+
 function openRecommendationModal(rec) {
   const book = buildRecommendationBook(rec);
   const modal = $('modalContent');
@@ -934,8 +991,12 @@ async function getRecommendations() {
     }
 
     if (!recommendations.length) {
-      $('recStatus').textContent = 'No tailored suggestions were found yet.';
-      return;
+      const fallback = getFallbackRecommendations(sourceBooks);
+      if (!fallback.length) {
+        $('recStatus').textContent = 'No tailored suggestions were found yet.';
+        return;
+      }
+      recommendations.push(...fallback);
     }
 
     $('recStatus').textContent = '';
