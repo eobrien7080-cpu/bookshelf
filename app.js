@@ -1,5 +1,44 @@
 const STORAGE_KEY = 'shelfed_users_v1';
 const CURRENT_EMAIL_KEY = 'shelfed_current_email';
+
+function makeSvgDataUri(svg) {
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
+
+function makeThemeBackground(colors, motif) {
+  const base = colors.base || '#f7f3eb';
+  const accent = colors.accent || '#9b5e1b';
+  const accent2 = colors.accent2 || '#4a6b5d';
+  const motifs = {
+    hogwarts: `<path d="M120 110l24 42 46 10-33 30 10 44-47-24-47 24 10-44-33-30 46-10z" fill="${accent}" opacity="0.2"/>`,
+    middleearth: `<path d="M150 140L110 40 80 92 50 60v82h100z" fill="${accent}" opacity="0.18"/>`,
+    gatsby: `<path d="M100 40h120v20H100zm0 40h120v20H100zm0 80h120v20H100z" fill="${accent}" opacity="0.16"/><rect x="70" y="120" width="140" height="120" rx="18" fill="${accent2}" opacity="0.12"/>`,
+    sherlock: `<path d="M70 140h140M140 70v140M90 90l100 100M90 190l100-100" stroke="${accent}" stroke-width="12" opacity="0.16"/>`
+  };
+  const pattern = motifs[motif] || `<rect x="70" y="70" width="140" height="140" rx="20" fill="${accent}" opacity="0.14"/>`;
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 220">
+      <rect width="320" height="220" rx="28" fill="${base}"/>
+      <rect x="24" y="24" width="272" height="172" rx="24" fill="${accent2}" opacity="0.16"/>
+      <rect x="44" y="44" width="232" height="132" rx="20" fill="${accent}" opacity="0.12"/>
+      ${pattern}
+    </svg>`;
+  return makeSvgDataUri(svg);
+}
+
+function makeAvatarImage(label, colors) {
+  const [bg, ring, accent] = colors;
+  const safeLabel = String(label).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240">
+      <rect width="240" height="240" rx="36" fill="${bg}"/>
+      <circle cx="120" cy="92" r="46" fill="${ring}"/>
+      <path d="M58 204c12-34 38-54 62-54s50 20 62 54" fill="${accent}"/>
+      <text x="120" y="218" text-anchor="middle" font-family="Georgia, Times New Roman, serif" font-size="30" font-weight="700" fill="#fff">${safeLabel}</text>
+    </svg>`;
+  return makeSvgDataUri(svg);
+}
+
 const THEMES = [
   {
     id: 'hogwarts',
@@ -7,7 +46,7 @@ const THEMES = [
     emblem: '🦉',
     desc: 'Candle-lit shelves, hidden spells, and wizarding wonder.',
     colors: { accent: '#b2923f', accentDeep: '#5d431b', accent2: '#2e5338' },
-    background: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1400&q=80'
+    background: makeThemeBackground({ base: '#f6ebd3', accent: '#b2923f', accent2: '#2e5338' }, 'hogwarts')
   },
   {
     id: 'middleearth',
@@ -15,7 +54,7 @@ const THEMES = [
     emblem: '💍',
     desc: 'Warm parchment, map lines, and the quiet comfort of a hobbit hole.',
     colors: { accent: '#a67c3e', accentDeep: '#5c4526', accent2: '#3f5c4f' },
-    background: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1400&q=80'
+    background: makeThemeBackground({ base: '#f3e8d2', accent: '#a67c3e', accent2: '#3f5c4f' }, 'middleearth')
   },
   {
     id: 'gatsby',
@@ -23,7 +62,7 @@ const THEMES = [
     emblem: '🌃',
     desc: 'Emerald nights, golden art deco lines, and roaring party glow.',
     colors: { accent: '#f2d46f', accentDeep: '#907545', accent2: '#12233d' },
-    background: 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1400&q=80'
+    background: makeThemeBackground({ base: '#fef6dd', accent: '#f2d46f', accent2: '#12233d' }, 'gatsby')
   },
   {
     id: 'sherlock',
@@ -31,19 +70,19 @@ const THEMES = [
     emblem: '🕯️',
     desc: 'Velvet shadows, brass accents, and the scent of old paper and mystery.',
     colors: { accent: '#d7b26a', accentDeep: '#4d402f', accent2: '#3b4f56' },
-    background: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?auto=format&fit=crop&w=1400&q=80'
+    background: makeThemeBackground({ base: '#efe6d6', accent: '#d7b26a', accent2: '#3b4f56' }, 'sherlock')
   }
 ];
 
 const CHARACTER_OPTIONS = [
-  { name: 'Harry Potter', image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Frodo Baggins', image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Jay Gatsby', image: 'https://images.unsplash.com/photo-1511765224389-37f0e77cf0eb?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Hermione Granger', image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Bilbo Baggins', image: 'https://images.unsplash.com/photo-1522098543979-ffc7f79d6c30?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Elizabeth Bennet', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Sherlock Holmes', image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80' },
-  { name: 'Lyra Belacqua', image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=500&q=80' }
+  { name: 'Harry Potter', image: makeAvatarImage('HP', ['#8d4f2d', '#cfa86b', '#5b3b1f']) },
+  { name: 'Frodo Baggins', image: makeAvatarImage('FB', ['#6d4d2d', '#c49a61', '#3f2b16']) },
+  { name: 'Jay Gatsby', image: makeAvatarImage('JG', ['#20364a', '#d7be7b', '#7c4c21']) },
+  { name: 'Hermione Granger', image: makeAvatarImage('HG', ['#3d5a4a', '#c7a56e', '#2f3f34']) },
+  { name: 'Bilbo Baggins', image: makeAvatarImage('BB', ['#6a4a2b', '#d7b37d', '#4e3017']) },
+  { name: 'Elizabeth Bennet', image: makeAvatarImage('EB', ['#6f4d4b', '#d3b38b', '#4a332b']) },
+  { name: 'Sherlock Holmes', image: makeAvatarImage('SH', ['#3b4f56', '#cfa76b', '#2a343c']) },
+  { name: 'Lyra Belacqua', image: makeAvatarImage('LB', ['#4a315d', '#a88b5f', '#2b2038']) }
 ];
 
 const state = {
