@@ -502,6 +502,7 @@ textarea { min-height: 80px; }
   background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
   box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
   padding: 16px; margin-bottom: 14px; display: flex; gap: 14px; align-items: flex-start;
+  position: relative;
 }
 .rec-card .cover-wrap { width: 84px; flex-shrink: 0; }
 .rec-card .rec-body { flex: 1; min-width: 0; }
@@ -509,6 +510,11 @@ textarea { min-height: 80px; }
 .rec-card .rec-author { color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
 .rec-card .rec-why { font-size: 13px; line-height: 1.5; color: var(--accent-2); }
 .rec-card .rec-add { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.rec-dismiss {
+  position: absolute; top: 8px; right: 8px; border: none; background: none; color: var(--ink-soft);
+  font-size: 18px; cursor: pointer; line-height: 1; padding: 2px 6px;
+}
+.rec-dismiss:hover { color: var(--ink); }
 .spinner {
   display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line);
   border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite;

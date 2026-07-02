@@ -844,6 +844,15 @@ function addRecommendationToWishlist(rec) {
   closeModal();
 }
 
+function dismissRecommendation(rec, recList) {
+  const card = recList.querySelector(`[data-rec-title="${encodeURIComponent(rec.title)}"]`);
+  if (card) card.remove();
+  const remaining = Array.from(recList.children).filter(child => child.dataset.recTitle);
+  if (!remaining.length) {
+    getRecommendations();
+  }
+}
+
 function openRecommendationModal(rec) {
   const book = buildRecommendationBook(rec);
   const modal = $('modalContent');
@@ -933,7 +942,9 @@ async function getRecommendations() {
     recommendations.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'rec-card';
+      card.dataset.recTitle = rec.title;
       card.innerHTML = `
+        <button class="rec-dismiss" type="button" aria-label="Dismiss recommendation" onclick="dismissRecommendation(${JSON.stringify(rec)}, this.closest('#recList'))">×</button>
         <div class="cover-wrap">${rec.cover ? `<img src="${rec.cover}" alt="${escapeHtml(rec.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(rec.title)}</div><div class="a">${escapeHtml(rec.author)}</div></div>`}</div>
         <div class="rec-body">
           <h4>${escapeHtml(rec.title)}</h4>
