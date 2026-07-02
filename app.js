@@ -872,29 +872,65 @@ async function getRecommendations() {
   $('recStatus').innerHTML = '<span class="spinner"></span>Finding a few picks…';
   recList.innerHTML = '';
 
-  const recommendations = [
-    { title: 'The Midnight Library', author: 'Matt Haig', why: 'A thoughtful story about regret, books, and second chances.', blurb: 'A warm, thoughtful novel about regret, possibility, and second chances.' },
-    { title: 'Dune', author: 'Frank Herbert', why: 'A world-building classic with unforgettable scope.', blurb: 'An epic science-fiction saga about power, destiny, and the desert world of Arrakis.' },
-    { title: 'The Night Circus', author: 'Erin Morgenstern', why: 'Spellbinding atmosphere and a magical rivalry.', blurb: 'A lush, atmospheric fantasy about a magical competition that unfolds under the night sky.' }
-  ];
+  const sourceBooks = state.user.books
+    .filter(book => Number(book.rating) >= 4 && book.status !== 'wishlist')
+    .sort((a, b) => Number(b.rating) - Number(a.rating))
+    .slice(0, 4);
+
+  if (!sourceBooks.length) {
+    $('recStatus').textContent = 'Rate a few books to get personalized recommendations.';
+    return;
+  }
+
+  const queries = sourceBooks.flatMap(book => {
+    const items = [];
+    if (book.author) items.push(book.author);
+    if (book.series) items.push(book.series);
+    return items;
+  }).filter(Boolean);
+
+  const recommendations = [];
+  const seen = new Set();
 
   try {
-    const enriched = await Promise.all(recommendations.map(async (rec) => {
-      try {
-        const matches = await fetchOpenLibraryBooks(`${rec.title} ${rec.author}`, 1);
-        const match = matches[0];
-        return {
-          ...rec,
-          cover: match?.cover || '',
-          blurb: rec.blurb || match?.blurb || rec.why
-        };
-      } catch (error) {
-        return rec;
+    for (const query of queries) {
+      if (recommendations.length >= 6) break;
+      const matches = await fetchOpenLibraryBooks(query, 3);
+      for (const match of matches) {
+        const key = `${match.title}|${match.author}`.toLowerCase();
+        if (seen.has(key)) continue;
+        const alreadyOwned = state.user.books.some(book =>
+          book.title === match.title && book.author === match.author
+        );
+        if (alreadyOwned) continue;
+
+        const source = sourceBooks.find(book =>
+          (book.author && match.author && book.author.toLowerCase() === match.author.toLowerCase()) ||
+          (book.series && match.series && book.series.toLowerCase() === match.series.toLowerCase())
+        ) || sourceBooks[0];
+
+        seen.add(key);
+        recommendations.push({
+          title: match.title,
+          author: match.author,
+          why: `Because you rated ${source.title} highly.`,
+          blurb: match.blurb || `A strong fit based on your love of ${source.title}.`,
+          cover: match.cover || '',
+          isbn: match.isbn || '',
+          series: match.series || ''
+        });
+
+        if (recommendations.length >= 6) break;
       }
-    }));
+    }
+
+    if (!recommendations.length) {
+      $('recStatus').textContent = 'No tailored suggestions were found yet.';
+      return;
+    }
 
     $('recStatus').textContent = '';
-    enriched.forEach(rec => {
+    recommendations.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'rec-card';
       card.innerHTML = `
