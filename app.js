@@ -1,10 +1,49 @@
 const STORAGE_KEY = 'shelfed_users_v1';
 const CURRENT_EMAIL_KEY = 'shelfed_current_email';
 const THEMES = [
-  { id: 'default', name: 'Warm pages', emblem: '☕', desc: 'Amber highlights and paper-soft warmth', colors: { accent: '#ff9900', accentDeep: '#e47911', accent2: '#007185' } },
-  { id: 'mint', name: 'Mint library', emblem: '🌿', desc: 'Fresh greens and calm sea tones', colors: { accent: '#2b8a3e', accentDeep: '#1f6d2f', accent2: '#20a4f3' } },
-  { id: 'twilight', name: 'Twilight', emblem: '🌙', desc: 'Cool violet pages and midnight ink', colors: { accent: '#9f7eff', accentDeep: '#7b5cff', accent2: '#4aa8ff' } },
-  { id: 'paper', name: 'Bright ledger', emblem: '📝', desc: 'Clean white space with crisp contrast', colors: { accent: '#007185', accentDeep: '#00576d', accent2: '#ff9900' } }
+  {
+    id: 'hogwarts',
+    name: 'Hogwarts Library',
+    emblem: '🦉',
+    desc: 'Candle-lit shelves, hidden spells, and wizarding wonder.',
+    colors: { accent: '#b2923f', accentDeep: '#5d431b', accent2: '#2e5338' },
+    background: 'https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=1400&q=80'
+  },
+  {
+    id: 'middleearth',
+    name: 'Middle-earth',
+    emblem: '💍',
+    desc: 'Warm parchment, map lines, and the quiet comfort of a hobbit hole.',
+    colors: { accent: '#a67c3e', accentDeep: '#5c4526', accent2: '#3f5c4f' },
+    background: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1400&q=80'
+  },
+  {
+    id: 'gatsby',
+    name: 'Gatsby Jazz',
+    emblem: '🌃',
+    desc: 'Emerald nights, golden art deco lines, and roaring party glow.',
+    colors: { accent: '#f2d46f', accentDeep: '#907545', accent2: '#12233d' },
+    background: 'https://images.unsplash.com/photo-1494526585095-c41746248156?auto=format&fit=crop&w=1400&q=80'
+  },
+  {
+    id: 'sherlock',
+    name: 'Baker Street',
+    emblem: '🕯️',
+    desc: 'Velvet shadows, brass accents, and the scent of old paper and mystery.',
+    colors: { accent: '#d7b26a', accentDeep: '#4d402f', accent2: '#3b4f56' },
+    background: 'https://images.unsplash.com/photo-1519682577862-22b62b24e493?auto=format&fit=crop&w=1400&q=80'
+  }
+];
+
+const CHARACTER_OPTIONS = [
+  { name: 'Harry Potter', image: 'https://images.unsplash.com/photo-1511919884226-fd3cad34687c?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Frodo Baggins', image: 'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Jay Gatsby', image: 'https://images.unsplash.com/photo-1511765224389-37f0e77cf0eb?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Hermione Granger', image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Bilbo Baggins', image: 'https://images.unsplash.com/photo-1522098543979-ffc7f79d6c30?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Elizabeth Bennet', image: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Sherlock Holmes', image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=500&q=80' },
+  { name: 'Lyra Belacqua', image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=500&q=80' }
 ];
 
 const state = {
@@ -56,12 +95,12 @@ function getOrCreateUser(name, email) {
     return user;
   }
 
-  const avatar = name.trim().charAt(0).toUpperCase() || 'S';
+  const avatar = CHARACTER_OPTIONS[0].name;
   return {
     name: name.trim() || 'Reader',
     email: trimmedEmail,
     avatar,
-    theme: 'default',
+    theme: 'hogwarts',
     dark: false,
     top5: [null, null, null, null, null],
     books: [],
@@ -153,12 +192,48 @@ function showApp() {
   applyTheme(state.user.theme);
 }
 
+function setDark(isDark) {
+  if (!state.user) return;
+  state.user.dark = !!isDark;
+  const root = document.documentElement;
+  if (state.user.dark) {
+    root.dataset.theme = 'dark';
+    document.body.dataset.theme = 'dark';
+  } else {
+    delete root.dataset.theme;
+    delete document.body.dataset.theme;
+  }
+  const toggle = $('darkToggle');
+  if (toggle) toggle.checked = state.user.dark;
+  saveCurrentUser();
+}
+
+function getAvatarInitials(name) {
+  const parts = String(name || '').split(' ').filter(Boolean);
+  if (!parts.length) return 'R';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+}
+
 function updateUserHeader() {
+  const selectedCharacter = CHARACTER_OPTIONS.find(item => item.name === state.user.avatar);
   $('whoName').textContent = state.user.name;
-  $('avatar').textContent = state.user.avatar;
+  if (selectedCharacter && selectedCharacter.image) {
+    $('avatar').style.backgroundImage = `url('${selectedCharacter.image}')`;
+    $('avatar').textContent = '';
+  } else {
+    $('avatar').style.backgroundImage = '';
+    $('avatar').textContent = getAvatarInitials(state.user.avatar);
+  }
   $('profileName').textContent = state.user.name;
   $('profileMail').textContent = state.user.email;
-  $('profileAvatar').textContent = state.user.avatar;
+  if (selectedCharacter && selectedCharacter.image) {
+    $('profileAvatar').style.backgroundImage = `url('${selectedCharacter.image}')`;
+    $('profileAvatar').textContent = '';
+  } else {
+    $('profileAvatar').style.backgroundImage = '';
+    $('profileAvatar').textContent = getAvatarInitials(state.user.avatar);
+  }
   $('themeEmblem').textContent = THEMES.find(theme => theme.id === state.user.theme)?.emblem || '';
 }
 
@@ -599,10 +674,16 @@ function copyShare() {
 
 function setDark(isDark) {
   if (!state.user) return;
-  state.user.dark = isDark;
+  state.user.dark = !!isDark;
   saveCurrentUser();
-  document.documentElement.dataset.theme = isDark ? 'dark' : '';
-  $('darkToggle').checked = isDark;
+  if (state.user.dark) {
+    document.documentElement.dataset.theme = 'dark';
+    document.body.dataset.theme = 'dark';
+  } else {
+    delete document.documentElement.dataset.theme;
+    delete document.body.dataset.theme;
+  }
+  $('darkToggle').checked = state.user.dark;
 }
 
 function renderThemeGrid() {
@@ -613,6 +694,7 @@ function renderThemeGrid() {
     card.className = 'theme-card';
     if (state.user.theme === theme.id) card.classList.add('on');
     card.innerHTML = `
+      <div class="theme-preview" style="background-image: url('${theme.background}')"></div>
       <div><span class="tname">${theme.name}</span><span class="temblem">${theme.emblem}</span></div>
       <div class="tdesc">${theme.desc}</div>
       <div class="swatches">
@@ -637,23 +719,29 @@ function applyTheme(themeId) {
   root.style.setProperty('--accent', theme.colors.accent);
   root.style.setProperty('--accent-deep', theme.colors.accentDeep);
   root.style.setProperty('--accent-2', theme.colors.accent2);
+  root.style.setProperty('--background-image', `url('${theme.background}')`);
+  root.dataset.story = themeId;
+  document.body.dataset.story = themeId;
   $('themeEmblem').textContent = theme.emblem;
 }
 
 function renderProfile() {
   if (!state.user) return;
-  const avatars = ['📚', '🦉', '✨', '📖', '🌿', '☕', '🎩', '🧭'];
   const picker = $('avatarPicker');
   picker.innerHTML = '';
 
-  avatars.forEach(symbol => {
+  CHARACTER_OPTIONS.forEach(character => {
     const item = document.createElement('button');
     item.type = 'button';
     item.className = 'avatar-opt';
-    if (state.user.avatar === symbol) item.classList.add('on');
-    item.textContent = symbol;
+    if (state.user.avatar === character.name) item.classList.add('on');
+    item.innerHTML = `
+      <img src="${character.image}" alt="${character.name}" loading="lazy">
+      <div class="character-name">${character.name}</div>
+      <div class="character-book">Select this character</div>
+    `;
     item.addEventListener('click', () => {
-      state.user.avatar = symbol;
+      state.user.avatar = character.name;
       saveCurrentUser();
       updateUserHeader();
       renderProfile();
@@ -661,7 +749,7 @@ function renderProfile() {
     picker.appendChild(item);
   });
 
-  $('avatarHint').textContent = 'Pick an icon to personalize your shelf.';
+  $('avatarHint').textContent = `Character: ${state.user.avatar}`;
   renderTopFive();
   renderFriendSummary();
   copyShare();
