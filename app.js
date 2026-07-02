@@ -823,35 +823,99 @@ function startScanner() {
   });
 }
 
-function getRecommendations() {
+function buildRecommendationBook(rec) {
+  return {
+    id: `rec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    title: rec.title,
+    author: rec.author,
+    series: rec.series || '',
+    isbn: rec.isbn || '',
+    cover: rec.cover || '',
+    blurb: rec.blurb || rec.why || 'A thoughtful pick for your shelf.',
+    status: 'wishlist',
+    rating: 0,
+    addedAt: Date.now()
+  };
+}
+
+function addRecommendationToWishlist(rec) {
+  const book = buildRecommendationBook(rec);
+  addBookToLibrary(book, { showToast: true });
+  closeModal();
+}
+
+function openRecommendationModal(rec) {
+  const book = buildRecommendationBook(rec);
+  const modal = $('modalContent');
+  modal.innerHTML = `
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="detail">
+      <div class="cover-wrap">${book.cover ? `<img src="${book.cover}" alt="${escapeHtml(book.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(book.title)}</div><div class="a">${escapeHtml(book.author)}</div></div>`}</div>
+      <div class="detail-info">
+        <h3>${escapeHtml(book.title)}</h3>
+        <div class="author">${escapeHtml(book.author)}</div>
+        <div class="blurb">${escapeHtml(book.blurb || 'No description available.')}</div>
+        <div class="row" style="margin-top:16px">
+          <button class="btn js-add-wishlist">Add to wishlist</button>
+          <a class="btn ghost" href="${buildAmazonUrl(book)}" target="_blank" rel="noreferrer">View on Amazon</a>
+        </div>
+      </div>
+    </div>
+  `;
+  modal.querySelector('.js-add-wishlist').addEventListener('click', () => addRecommendationToWishlist(rec));
+  $('modalBg').classList.add('open');
+}
+
+async function getRecommendations() {
   if (!state.user) return;
   const recList = $('recList');
   $('recStatus').innerHTML = '<span class="spinner"></span>Finding a few picks…';
   recList.innerHTML = '';
 
   const recommendations = [
-    { title: 'The Midnight Library', author: 'Matt Haig', why: 'A thoughtful story about regret, books, and second chances.', link: 'https://www.amazon.com' },
-    { title: 'Dune', author: 'Frank Herbert', why: 'A world-building classic with unforgettable scope.', link: 'https://www.amazon.com' },
-    { title: 'The Night Circus', author: 'Erin Morgenstern', why: 'Spellbinding atmosphere and a magical rivalry.', link: 'https://www.amazon.com' }
+    { title: 'The Midnight Library', author: 'Matt Haig', why: 'A thoughtful story about regret, books, and second chances.', blurb: 'A warm, thoughtful novel about regret, possibility, and second chances.' },
+    { title: 'Dune', author: 'Frank Herbert', why: 'A world-building classic with unforgettable scope.', blurb: 'An epic science-fiction saga about power, destiny, and the desert world of Arrakis.' },
+    { title: 'The Night Circus', author: 'Erin Morgenstern', why: 'Spellbinding atmosphere and a magical rivalry.', blurb: 'A lush, atmospheric fantasy about a magical competition that unfolds under the night sky.' }
   ];
 
-  setTimeout(() => {
+  try {
+    const enriched = await Promise.all(recommendations.map(async (rec) => {
+      try {
+        const matches = await fetchOpenLibraryBooks(`${rec.title} ${rec.author}`, 1);
+        const match = matches[0];
+        return {
+          ...rec,
+          cover: match?.cover || '',
+          blurb: rec.blurb || match?.blurb || rec.why
+        };
+      } catch (error) {
+        return rec;
+      }
+    }));
+
     $('recStatus').textContent = '';
-    recommendations.forEach(rec => {
+    enriched.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'rec-card';
       card.innerHTML = `
-        <div class="cover-wrap"><div class="cover-fallback"><div class="t">${rec.title}</div><div class="a">${rec.author}</div></div></div>
-        <div>
-          <h4>${rec.title}</h4>
-          <div class="rec-author">${rec.author}</div>
-          <div class="rec-why">${rec.why}</div>
-          <div class="rec-add"><a class="btn ghost" target="_blank" rel="noreferrer" href="${rec.link}">View</a></div>
+        <div class="cover-wrap">${rec.cover ? `<img src="${rec.cover}" alt="${escapeHtml(rec.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(rec.title)}</div><div class="a">${escapeHtml(rec.author)}</div></div>`}</div>
+        <div class="rec-body">
+          <h4>${escapeHtml(rec.title)}</h4>
+          <div class="rec-author">${escapeHtml(rec.author)}</div>
+          <div class="rec-why">${escapeHtml(rec.why)}</div>
+          <div class="rec-add">
+            <button class="btn ghost small js-view">View</button>
+            <button class="btn small js-wishlist">Add to wishlist</button>
+          </div>
         </div>
       `;
+      card.querySelector('.js-view').addEventListener('click', () => openRecommendationModal(rec));
+      card.querySelector('.js-wishlist').addEventListener('click', () => addRecommendationToWishlist(rec));
       recList.appendChild(card);
     });
-  }, 800);
+  } catch (error) {
+    $('recStatus').textContent = 'Unable to load recommendations right now.';
+  }
 }
 
 function copyFriendLink() {

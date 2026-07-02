@@ -503,8 +503,9 @@ textarea { min-height: 80px; }
   box-shadow: 0 1px 3px var(--shadow-a), 0 4px 14px var(--shadow-b);
   padding: 16px; margin-bottom: 14px; display: flex; gap: 14px; align-items: flex-start;
 }
-.rec-card .cover-wrap { width: 72px; flex-shrink: 0; }
-.rec-card h4 { font-size: 16px; font-family: "Bookerly", Charter, Georgia, serif; }
+.rec-card .cover-wrap { width: 84px; flex-shrink: 0; }
+.rec-card .rec-body { flex: 1; min-width: 0; }
+.rec-card h4 { font-size: 16px; font-family: "Bookerly", Charter, Georgia, serif; margin-bottom: 4px; }
 .rec-card .rec-author { color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
 .rec-card .rec-why { font-size: 13px; line-height: 1.5; color: var(--accent-2); }
 .rec-card .rec-add { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
