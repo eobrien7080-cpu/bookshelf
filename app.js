@@ -457,6 +457,62 @@ function renderWishlist() {
   wishlist.forEach(book => grid.appendChild(createBookCard(book)));
 }
 
+function renderRelatedResults(bookId, relationType) {
+  const book = state.user.books.find(item => item.id === bookId);
+  if (!book) return;
+
+  const query = relationType === 'author' ? book.author : (book.series || book.title);
+  const heading = relationType === 'author' ? `More by ${book.author}` : `More in ${book.series || book.title}`;
+  $('modalContent').innerHTML = `
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h3 class="mh">${escapeHtml(heading)}</h3>
+    <div class="sub" style="margin-top:-6px">Searching for “${escapeHtml(query)}”.</div>
+    <div class="status">Loading related books…</div>
+  `;
+  $('modalBg').classList.add('open');
+
+  fetchOpenLibraryBooks(query, 8).then(books => {
+    const filtered = books.filter(item => !(item.title === book.title && item.author === book.author));
+    const content = document.createElement('div');
+    content.className = 'picker-list';
+
+    if (!filtered.length) {
+      content.innerHTML = '<div class="empty">No related books were found.</div>';
+    } else {
+      filtered.forEach(result => {
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'picker-item';
+        item.innerHTML = `
+          <div class="cover-wrap">${result.cover ? `<img src="${result.cover}" alt="${escapeHtml(result.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(result.title)}</div></div>`}</div>
+          <div>
+            <div class="pt">${escapeHtml(result.title)}</div>
+            <div class="pa">${escapeHtml(result.author)}</div>
+          </div>
+        `;
+        item.addEventListener('click', () => addBookToLibrary(result));
+        content.appendChild(item);
+      });
+    }
+
+    $('modalContent').innerHTML = `
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h3 class="mh">${escapeHtml(heading)}</h3>
+      <div class="sub" style="margin-top:-6px">Tap a result to add it to your shelf.</div>
+      <div class="row" style="margin-bottom:12px">
+        <button class="btn ghost small" onclick="openBookModal('${book.id}')">Back to book</button>
+      </div>
+    `;
+    $('modalContent').appendChild(content);
+  }).catch(() => {
+    $('modalContent').innerHTML = `
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h3 class="mh">${escapeHtml(heading)}</h3>
+      <div class="status err">Unable to load related books right now.</div>
+    `;
+  });
+}
+
 function openBookModal(bookId) {
   const book = state.user.books.find(item => item.id === bookId);
   if (!book) return;
@@ -467,8 +523,8 @@ function openBookModal(bookId) {
       <div class="cover-wrap">${book.cover ? `<img src="${book.cover}" alt="${book.title} cover">` : `<div class="cover-fallback"><div class="t">${book.title}</div><div class="a">${book.author}</div></div>`}</div>
       <div class="detail-info">
         <h3>${book.title}</h3>
-        <div class="author">${book.author}</div>
-        ${book.series ? `<div class="series-line">Series: ${book.series}</div>` : ''}
+        <div class="author"><button class="author-link" onclick="renderRelatedResults('${book.id}','author')">${book.author}</button></div>
+        ${book.series ? `<div class="series-line">Series: <button class="author-link" onclick="renderRelatedResults('${book.id}','series')">${book.series}</button></div>` : ''}
         <div class="blurb">${book.blurb || 'No description available.'}</div>
         <div class="field-label">Your rating</div>
         ${renderRatingEditor(book)}
@@ -543,19 +599,54 @@ async function lookupISBN(isbn) {
 
 async function searchOpenLibrary(query) {
   try {
-    const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=1`);
-    const result = await response.json();
-    if (!result.docs || !result.docs.length) {
+    const books = await fetchOpenLibraryBooks(query, 8);
+    if (!books.length) {
       setStatus('lookupStatus', 'No matching book was found.', 'err');
-      return;
+      return [];
     }
-    const raw = result.docs[0];
-    const book = mapOpenLibraryResult({ title: raw.title, author_name: raw.author_name, isbn: raw.isbn && raw.isbn[0], first_publish_year: raw.first_publish_year, subject: raw.subject, cover_i: raw.cover_i, subtitle: raw.subtitle, series: raw.series });
-    showPreview(book);
+
+    if (books.length > 1) {
+      showSearchResults(books, query);
+    } else {
+      showPreview(books[0]);
+    }
     setStatus('lookupStatus', '', '');
+    return books;
   } catch (error) {
     setStatus('lookupStatus', 'Unable to look up the book right now.', 'err');
+    return [];
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function addBookToLibrary(book, options = {}) {
+  if (!book || !state.user) {
+    if (options.showToast !== false) showToast('No book is ready to add.');
+    return null;
+  }
+
+  const normalized = {
+    ...book,
+    status: book.status || state.currentStatus,
+    rating: Number(book.rating) || 0,
+    addedAt: Date.now()
+  };
+
+  state.user.books.unshift(normalized);
+  saveCurrentUser();
+  renderLibrary();
+  renderWishlist();
+  if (options.showToast !== false) showToast('Book added to your shelf.');
+  clearPreview();
+  return normalized;
 }
 
 function mapOpenLibraryResult(raw) {
@@ -576,6 +667,16 @@ function mapOpenLibraryResult(raw) {
     rating: 0,
     addedAt: Date.now()
   };
+}
+
+async function fetchOpenLibraryBooks(query, limit = 8) {
+  const response = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(query)}&limit=${limit}`);
+  const result = await response.json();
+  if (!result.docs || !result.docs.length) return [];
+
+  return result.docs
+    .map(raw => mapOpenLibraryResult({ title: raw.title, author_name: raw.author_name, isbn: raw.isbn && raw.isbn[0], first_publish_year: raw.first_publish_year, subject: raw.subject, cover_i: raw.cover_i, subtitle: raw.subtitle, series: raw.series, description: raw.description }))
+    .filter(book => book.title !== 'Untitled' || book.author !== 'Unknown author');
 }
 
 function showPreview(book) {
@@ -609,6 +710,38 @@ function pickStatus(status) {
   updateStatusChips();
 }
 
+function showSearchResults(books, query) {
+  state.searchResults = books;
+  state.previewBook = null;
+  $('previewPanel').style.display = 'block';
+  $('previewDetail').innerHTML = '';
+
+  const heading = document.createElement('div');
+  heading.innerHTML = `
+    <h3>Choose a match</h3>
+    <div class="sub" style="margin: 4px 0 12px;">Showing ${books.length} result${books.length === 1 ? '' : 's'} for “${escapeHtml(query)}”.</div>
+  `;
+  $('previewDetail').appendChild(heading);
+
+  const list = document.createElement('div');
+  list.className = 'picker-list';
+  books.forEach(book => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'picker-item';
+    item.innerHTML = `
+      <div class="cover-wrap">${book.cover ? `<img src="${book.cover}" alt="${escapeHtml(book.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(book.title)}</div></div>`}</div>
+      <div>
+        <div class="pt">${escapeHtml(book.title)}</div>
+        <div class="pa">${escapeHtml(book.author)}</div>
+      </div>
+    `;
+    item.addEventListener('click', () => showPreview(book));
+    list.appendChild(item);
+  });
+  $('previewDetail').appendChild(list);
+}
+
 function addPreviewToLibrary() {
   if (!state.previewBook || !state.user) {
     showToast('No book is ready to add.');
@@ -616,17 +749,12 @@ function addPreviewToLibrary() {
   }
 
   state.previewBook.status = state.currentStatus;
-  state.previewBook.addedAt = Date.now();
-  state.user.books.unshift(state.previewBook);
-  saveCurrentUser();
-  renderLibrary();
-  renderWishlist();
-  showToast('Book added to your shelf.');
-  clearPreview();
+  addBookToLibrary(state.previewBook, { showToast: true });
 }
 
 function clearPreview() {
   state.previewBook = null;
+  state.searchResults = [];
   $('previewPanel').style.display = 'none';
   $('previewDetail').innerHTML = '';
   setStatus('lookupStatus', '', '');
@@ -916,6 +1044,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 window.updateBookStatus = updateBookStatus;
 window.setBookRating = setBookRating;
+window.renderRelatedResults = renderRelatedResults;
 window.chooseTopFive = chooseTopFive;
 window.closeModal = closeModal;
 window.signIn = signIn;
