@@ -91,7 +91,8 @@ const state = {
   previewBook: null,
   scanMode: false,
   scanner: null,
-  currentStatus: 'own'
+  currentStatus: 'own',
+  recommendations: []
 };
 
 const ids = [
@@ -227,6 +228,7 @@ function showApp() {
   renderWishlist();
   renderProfile();
   renderThemeGrid();
+  renderRecommendationsSummary();
   setDark(state.user.dark);
   applyTheme(state.user.theme);
 }
@@ -295,6 +297,9 @@ function showView(view) {
   }
   if (view === 'profile') {
     renderProfile();
+  }
+  if (view === 'recs') {
+    renderRecommendationsSummary();
   }
 }
 
@@ -845,9 +850,10 @@ function addRecommendationToWishlist(rec) {
 }
 
 function dismissRecommendation(rec, recList) {
-  const card = recList.querySelector(`[data-rec-title="${encodeURIComponent(rec.title)}"]`);
+  const key = `${rec.title}|${rec.author}`.toLowerCase();
+  const card = Array.from(recList.children).find(child => child.dataset.recKey === key);
   if (card) card.remove();
-  const remaining = Array.from(recList.children).filter(child => child.dataset.recTitle);
+  const remaining = Array.from(recList.children).filter(child => child.dataset.recKey);
   if (!remaining.length) {
     getRecommendations();
   }
@@ -932,11 +938,51 @@ function openRecommendationModal(rec) {
   $('modalBg').classList.add('open');
 }
 
+function renderRecommendationsSummary(recommendations = state.recommendations) {
+  const container = $('recSummaryContent');
+  if (!container || !state.user) {
+    if (container) container.innerHTML = '';
+    return;
+  }
+
+  const books = state.user.books || [];
+  const total = books.length;
+  const owned = books.filter(book => book.status === 'own').length;
+  const borrowed = books.filter(book => book.status === 'borrow').length;
+  const wishlist = books.filter(book => book.status === 'wishlist').length;
+  const rated = books.filter(book => Number(book.rating) > 0).length;
+  const topRated = books.filter(book => Number(book.rating) >= 4).slice(0, 4);
+
+  const recMarkup = recommendations.length
+    ? recommendations.map(rec => `<div class="summary-pill">${escapeHtml(rec.title)} — ${escapeHtml(rec.author)}</div>`).join('')
+    : '<div class="summary-sub">Tap “Get recommendations” to fill this section.</div>';
+
+  container.innerHTML = `
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">Books in your library</div>
+        <div class="summary-value">${total}</div>
+        <div class="summary-sub">${owned} owned • ${borrowed} borrowed • ${wishlist} wishlist</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Rated books</div>
+        <div class="summary-value">${rated}</div>
+        <div class="summary-sub">${topRated.length ? topRated.map(book => escapeHtml(book.title)).join(', ') : 'Rate a few books to sharpen your recommendations.'}</div>
+      </div>
+      <div class="summary-card wide">
+        <div class="summary-label">Currently recommended</div>
+        <div class="summary-sub">${recMarkup}</div>
+      </div>
+    </div>
+  `;
+}
+
 async function getRecommendations() {
   if (!state.user) return;
   const recList = $('recList');
   $('recStatus').innerHTML = '<span class="spinner"></span>Finding a few picks…';
   recList.innerHTML = '';
+  state.recommendations = [];
 
   const sourceBooks = state.user.books
     .filter(book => Number(book.rating) >= 4 && book.status !== 'wishlist')
@@ -999,11 +1045,13 @@ async function getRecommendations() {
       recommendations.push(...fallback);
     }
 
+    state.recommendations = recommendations;
+    renderRecommendationsSummary(recommendations);
     $('recStatus').textContent = '';
     recommendations.forEach(rec => {
       const card = document.createElement('div');
       card.className = 'rec-card';
-      card.dataset.recTitle = rec.title;
+      card.dataset.recKey = `${rec.title}|${rec.author}`.toLowerCase();
       card.innerHTML = `
         <button class="rec-dismiss" type="button" aria-label="Dismiss recommendation" onclick="dismissRecommendation(${JSON.stringify(rec)}, this.closest('#recList'))">×</button>
         <div class="cover-wrap">${rec.cover ? `<img src="${rec.cover}" alt="${escapeHtml(rec.title)} cover">` : `<div class="cover-fallback"><div class="t">${escapeHtml(rec.title)}</div><div class="a">${escapeHtml(rec.author)}</div></div>`}</div>
@@ -1022,6 +1070,8 @@ async function getRecommendations() {
       recList.appendChild(card);
     });
   } catch (error) {
+    state.recommendations = [];
+    renderRecommendationsSummary([]);
     $('recStatus').textContent = 'Unable to load recommendations right now.';
   }
 }
