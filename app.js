@@ -316,8 +316,7 @@ function renderLibrary() {
     if (filter === 'own' && book.status !== 'own') return false;
     if (filter === 'borrow' && book.status !== 'borrow') return false;
     if (!query) return true;
-    return [book.title, book.author, book.series, book.isbn, book.status].some(value =>
-      String(value || '').toLowerCase().includes(query)
+  return [book.title, book.author, book.series, book.theme, book.isbn, book.status].some(value =>
     );
   });
 
@@ -404,6 +403,7 @@ function createBookCard(book) {
     </div>
     <div class="card-meta">
       <span class="card-title">${book.title}</span>
+      <span class="card-sub">${escapeHtml(book.series || book.theme || '')}</span>
       <div class="card-stars">${renderRating(book.rating)}</div>
     </div>
   `;
@@ -529,11 +529,13 @@ function openBookModal(bookId) {
       <div class="detail-info">
         <h3>${book.title}</h3>
         <div class="author"><button class="author-link" onclick="renderRelatedResults('${book.id}','author')">${book.author}</button></div>
-        ${book.series ? `<div class="series-line">Series: <button class="author-link" onclick="renderRelatedResults('${book.id}','series')">${book.series}</button></div>` : ''}
+        ${book.series ? `<div class="series-line">Series: <button class="author-link" onclick="renderRelatedResults('${book.id}','series')">${escapeHtml(book.series)}</button></div>` : ''}
+        ${book.theme ? `<div class="series-line">Theme: ${escapeHtml(book.theme)}</div>` : ''}
         <div class="blurb">${book.blurb || 'No description available.'}</div>
         <div class="field-label">Your rating</div>
         ${renderRatingEditor(book)}
         <div class="row" style="margin-top:16px">
+          <button class="btn danger" onclick="removeBook('${book.id}')">Remove book</button>
           <a class="btn ghost" href="${buildAmazonUrl(book)}" target="_blank" rel="noreferrer">View on Amazon</a>
         </div>
         <div class="field-label">Status</div>
@@ -551,6 +553,20 @@ function openBookModal(bookId) {
 function closeModal() {
   $('modalBg').classList.remove('open');
   $('modalContent').innerHTML = '';
+}
+
+function removeBook(bookId) {
+  const index = state.user.books.findIndex(item => item.id === bookId);
+  if (index === -1) return;
+  const [removed] = state.user.books.splice(index, 1);
+  state.user.top5 = state.user.top5.map(id => id === bookId ? null : id);
+  saveCurrentUser();
+  renderLibrary();
+  renderWishlist();
+  renderProfile();
+  renderRecommendationsSummary();
+  closeModal();
+  showToast(`Removed “${removed.title}” from your shelf.`);
 }
 
 function updateBookStatus(bookId, status) {
@@ -642,6 +658,8 @@ function addBookToLibrary(book, options = {}) {
     ...book,
     status: book.status || state.currentStatus,
     rating: Number(book.rating) || 0,
+    theme: book.theme || '',
+    series: book.series || '',
     addedAt: Date.now()
   };
 
@@ -654,20 +672,60 @@ function addBookToLibrary(book, options = {}) {
   return normalized;
 }
 
+function extractSeries(raw) {
+  if (Array.isArray(raw.series) && raw.series.length) return raw.series[0];
+  if (typeof raw.series === 'string' && raw.series.trim()) return raw.series;
+  if (Array.isArray(raw.series_title) && raw.series_title.length) return raw.series_title[0];
+  if (typeof raw.series_title === 'string' && raw.series_title.trim()) return raw.series_title;
+  if (typeof raw.work_title === 'string' && raw.work_title.trim()) return raw.work_title;
+  return '';
+}
+
+function extractTheme(raw) {
+  const candidates = [];
+  const addSubjects = value => {
+    if (!value) return;
+    if (Array.isArray(value)) {
+      value.forEach(item => { if (item) candidates.push(String(item).trim()); });
+    } else if (typeof value === 'string') {
+      candidates.push(value.trim());
+    }
+  };
+
+  addSubjects(raw.subject);
+  addSubjects(raw.subjects);
+  addSubjects(raw.subject_facet);
+  addSubjects(raw.subject_people);
+  addSubjects(raw.subject_places);
+  addSubjects(raw.subject_times);
+  addSubjects(raw.genre);
+  addSubjects(raw.genre_facet);
+
+  const preferred = ['Fantasy', 'Science Fiction', 'Mystery', 'Romance', 'Thriller', 'Historical Fiction', 'Adventure', 'Horror', 'Young Adult', 'Nonfiction', 'Biography', 'Business', 'Self-help'];
+  const found = candidates.find(subject => preferred.some(pref => subject.toLowerCase().includes(pref.toLowerCase())));
+  if (found) return found;
+  return candidates.find(Boolean) || '';
+}
+
 function mapOpenLibraryResult(raw) {
   const title = raw.title || 'Untitled';
   const author = Array.isArray(raw.author_name) ? raw.author_name[0] : raw.author || 'Unknown author';
-  const series = Array.isArray(raw.series) ? raw.series[0] : raw.series || '';
+  const series = extractSeries(raw);
+  const theme = extractTheme(raw);
   const isbn = raw.isbn || raw.key || '';
   const cover = raw.cover_i ? `https://covers.openlibrary.org/b/id/${raw.cover_i}-L.jpg` : raw.cover ? `https://covers.openlibrary.org/b/isbn/${raw.cover}-L.jpg` : '';
+  const description = raw.subtitle || raw.description || raw.first_sentence || '';
+  const blurbText = typeof description === 'object' ? (description.value || '') : description;
+  const subjects = Array.isArray(raw.subject) ? raw.subject : Array.isArray(raw.subjects) ? raw.subjects : [];
   return {
     id: `book-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     title,
     author,
     series,
+    theme,
     isbn: String(isbn),
     cover,
-    blurb: raw.subtitle || raw.description || (Array.isArray(raw.subject) ? raw.subject.slice(0, 4).join(', ') : '') || 'A fresh addition to your shelf.',
+    blurb: blurbText || subjects.slice(0, 4).join(', ') || 'A fresh addition to your shelf.',
     status: state.currentStatus,
     rating: 0,
     addedAt: Date.now()
@@ -680,7 +738,27 @@ async function fetchOpenLibraryBooks(query, limit = 8) {
   if (!result.docs || !result.docs.length) return [];
 
   return result.docs
-    .map(raw => mapOpenLibraryResult({ title: raw.title, author_name: raw.author_name, isbn: raw.isbn && raw.isbn[0], first_publish_year: raw.first_publish_year, subject: raw.subject, cover_i: raw.cover_i, subtitle: raw.subtitle, series: raw.series, description: raw.description }))
+    .map(raw => mapOpenLibraryResult({
+      title: raw.title,
+      author_name: raw.author_name,
+      isbn: raw.isbn && raw.isbn[0],
+      first_publish_year: raw.first_publish_year,
+      subject: raw.subject,
+      subjects: raw.subjects,
+      subject_facet: raw.subject_facet,
+      subject_people: raw.subject_people,
+      subject_places: raw.subject_places,
+      subject_times: raw.subject_times,
+      genre: raw.genre,
+      genre_facet: raw.genre_facet,
+      cover_i: raw.cover_i,
+      subtitle: raw.subtitle,
+      series: raw.series,
+      series_title: raw.series_title,
+      work_title: raw.work_title,
+      description: raw.description,
+      first_sentence: raw.first_sentence
+    }))
     .filter(book => book.title !== 'Untitled' || book.author !== 'Unknown author');
 }
 
@@ -693,7 +771,8 @@ function showPreview(book) {
     <div class="detail-info">
       <h3>${book.title}</h3>
       <div class="author">${book.author}</div>
-      ${book.series ? `<div class="series-line">Series: ${book.series}</div>` : ''}
+      ${book.series ? `<div class="series-line">Series: ${escapeHtml(book.series)}</div>` : ''}
+      ${book.theme ? `<div class="series-line">Theme: ${escapeHtml(book.theme)}</div>` : ''}
       <div class="blurb">${book.blurb}</div>
     </div>
   `;
