@@ -368,6 +368,11 @@ function renderRating(rating) {
   return '★'.repeat(Math.min(5, rating));
 }
 
+function buildAmazonUrl(book) {
+  const query = book.isbn ? `${book.isbn} ${book.title} ${book.author}` : `${book.title} ${book.author}`;
+  return `https://www.amazon.com/s?k=${encodeURIComponent(query)}`;
+}
+
 function renderWishlist() {
   if (!state.user) return;
   const wishlist = state.user.books.filter(book => book.status === 'wishlist');
@@ -394,6 +399,9 @@ function openBookModal(bookId) {
         <div class="author">${book.author}</div>
         ${book.series ? `<div class="series-line">Series: ${book.series}</div>` : ''}
         <div class="blurb">${book.blurb || 'No description available.'}</div>
+        <div class="row" style="margin-top:16px">
+          <a class="btn ghost" href="${buildAmazonUrl(book)}" target="_blank" rel="noreferrer">View on Amazon</a>
+        </div>
         <div class="field-label">Status</div>
         <div class="chips">
           <button class="chip ${book.status === 'own' ? 'on' : ''}" onclick="updateBookStatus('${book.id}','own')">✓ Own</button>
