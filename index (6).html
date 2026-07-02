@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shelfd — your virtual library</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+  :root {
+    /* Kindle-inspired: paper white, warm ink, Amazon orange */
+    --paper: #ffffff;
+    --paper-warm: #faf9f7;
+    --paper-shade: #f2f0ec;
+    --ink: #232323;
+    --ink-soft: #6b6b6b;
+    --orange: #ff9900;
+    --orange-deep: #e47911;
+    --teal: #007185;
+    --line: #e3e0da;
+    --card-shadow: 0 1px 3px rgba(35,35,35,0.08), 0 4px 14px rgba(35,35,35,0.06);
+    --radius: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+  body {
+    background: var(--paper-warm);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .serif { font-family: "Bookerly", Charter, "Iowan Old Style", Georgia, serif; }
+
+  /* ---------- Header ---------- */
+  header {
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .header-inner {
+    max-width: 1080px; margin: 0 auto; padding: 18px 20px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  .logo {
+    font-family: "Bookerly", Charter, "Iowan Old Style", Georgia, serif;
+    font-size: 28px; font-weight: 700; letter-spacing: -0.5px;
+  }
+  .logo em { font-style: italic; color: var(--orange-deep); }
+  .tagline { color: var(--ink-soft); font-size: 12px; }
+  .whoami { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-soft); }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--orange); color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .link-btn { background: none; border: none; color: var(--teal); font-size: 13px; cursor: pointer; text-decoration: underline; padding: 4px; }
+
+  nav {
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .nav-inner {
+    max-width: 1080px; margin: 0 auto; padding: 0 20px;
+    display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+  }
+  .tab {
+    background: none; border: none; color: var(--ink-soft);
+    font-size: 14px; font-weight: 600; padding: 12px 14px; cursor: pointer;
+    border-bottom: 3px solid transparent; white-space: nowrap;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab:focus-visible { outline: 2px solid var(--orange-deep); outline-offset: -2px; }
+  .tab.active { color: var(--orange-deep); border-bottom-color: var(--orange); }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 20px 90px; }
+  .view { display: none; }
+  .view.active { display: block; animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  h2 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 24px; margin-bottom: 6px; }
+  .sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+
+  /* ---------- Sign in ---------- */
+  #signin {
+    max-width: 420px; margin: 8vh auto 0; text-align: center;
+  }
+  #signin .book-mark { font-size: 44px; margin-bottom: 10px; }
+  #signin h1 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 32px; margin-bottom: 6px; }
+  #signin h1 em { font-style: italic; color: var(--orange-deep); }
+  #signin p { color: var(--ink-soft); font-size: 14px; margin-bottom: 24px; }
+  .signin-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--card-shadow); padding: 24px; text-align: left;
+  }
+  .signin-card label { font-size: 13px; font-weight: 600; display: block; margin: 12px 0 6px; }
+  .signin-card input {
+    width: 100%; padding: 12px; font-size: 16px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--paper-warm); color: var(--ink);
+  }
+  .signin-card .btn { width: 100%; margin-top: 18px; }
+  .profiles { margin-top: 22px; text-align: left; }
+  .profiles .pl { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin-bottom: 8px; }
+  .profile-row {
+    width: 100%; display: flex; align-items: center; gap: 10px;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; margin-bottom: 8px; cursor: pointer; font-size: 14px; color: var(--ink); text-align: left;
+  }
+  .profile-row:hover { border-color: var(--orange); }
+  .profile-row .pe { color: var(--ink-soft); font-size: 12px; }
+
+  /* ---------- Library ---------- */
+  .shelf-stats { display: flex; gap: 24px; margin-bottom: 20px; flex-wrap: wrap; }
+  .stat .num { font-family: "Bookerly", Charter, Georgia, serif; font-size: 26px; color: var(--orange-deep); font-weight: 700; }
+  .stat .lbl { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 1px; }
+
+  .toolbar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  select, .search-input {
+    background: var(--paper); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 12px; font-size: 16px;
+  }
+  .search-input { flex: 1; min-width: 160px; }
+  select:focus, input:focus, textarea:focus { outline: 2px solid var(--orange); outline-offset: 1px; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+    gap: 18px;
+  }
+  .book-card {
+    cursor: pointer; border: none; background: none; padding: 0; text-align: left; color: var(--ink); width: 100%;
+  }
+  .book-card:focus-visible { outline: 2px solid var(--orange-deep); outline-offset: 3px; border-radius: 8px; }
+  .cover-wrap {
+    position: relative; aspect-ratio: 2 / 3; border-radius: 6px; overflow: hidden;
+    background: var(--paper-shade);
+    box-shadow: var(--card-shadow);
+    transition: transform .18s ease, box-shadow .18s ease;
+  }
+  .book-card:hover .cover-wrap { transform: translateY(-4px); box-shadow: 0 8px 22px rgba(35,35,35,0.18); }
+  .cover-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cover-fallback {
+    width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between;
+    padding: 12px; background: linear-gradient(160deg, #fff, var(--paper-shade));
+    border-left: 6px solid var(--orange);
+  }
+  .cover-fallback .t { font-family: "Bookerly", Charter, Georgia, serif; font-size: 14px; font-weight: 700; line-height: 1.25; }
+  .cover-fallback .a { font-size: 11px; color: var(--ink-soft); }
+  .card-meta { margin-top: 8px; }
+  .card-title { font-size: 13px; font-weight: 600; line-height: 1.25; display: block; }
+  .card-stars { color: var(--orange-deep); font-size: 12px; letter-spacing: 1px; margin-top: 3px; }
+  .card-stars .unrated { color: var(--ink-soft); font-style: italic; letter-spacing: 0; }
+
+  .empty {
+    border: 1px dashed var(--line); border-radius: var(--radius);
+    padding: 44px 24px; text-align: center; color: var(--ink-soft); background: var(--paper);
+  }
+  .empty .big { font-size: 34px; margin-bottom: 8px; }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    background: linear-gradient(#ffb84d, var(--orange)); color: var(--ink);
+    border: 1px solid var(--orange-deep); border-radius: 8px; padding: 12px 18px;
+    font-size: 14px; font-weight: 700; cursor: pointer;
+    transition: filter .15s ease;
+  }
+  .btn:hover { filter: brightness(1.04); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .btn.ghost { background: var(--paper); color: var(--ink); border: 1px solid var(--line); }
+  .btn.ghost:hover { border-color: var(--ink-soft); filter: none; }
+  .btn.danger { background: var(--paper); color: #b3402e; border: 1px solid #e0b0a8; }
+
+  /* ---------- Panels / scan ---------- */
+  .panel {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--card-shadow);
+    padding: 20px; margin-bottom: 18px;
+  }
+  #reader { border-radius: 10px; overflow: hidden; max-width: 420px; margin: 12px auto; }
+  #reader video { border-radius: 10px; width: 100% !important; }
+  .scan-hint { text-align: center; color: var(--ink-soft); font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .row input[type=text] {
+    flex: 1; min-width: 200px;
+    background: var(--paper-warm); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px; font-size: 16px;
+  }
+  .status { margin-top: 12px; font-size: 14px; color: var(--ink-soft); min-height: 20px; }
+  .status.err { color: #b3402e; }
+  .status.ok { color: #1d7a3e; }
+
+  /* ---------- Detail ---------- */
+  .detail { display: flex; gap: 22px; flex-wrap: wrap; }
+  .detail .cover-wrap { width: 170px; flex-shrink: 0; }
+  .detail-info { flex: 1; min-width: 240px; }
+  .detail-info h3 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 22px; line-height: 1.2; }
+  .detail-info .author { color: var(--ink-soft); margin: 4px 0 12px; }
+
+  .stars { display: inline-flex; gap: 2px; }
+  .star { position: relative; width: 34px; height: 34px; cursor: pointer; display: inline-block; }
+  .star svg { width: 34px; height: 34px; display: block; }
+  .rating-label { margin-left: 10px; color: var(--orange-deep); font-weight: 700; font-size: 14px; vertical-align: middle; }
+  textarea {
+    width: 100%; background: var(--paper-warm); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 10px 12px; font-size: 16px; font-family: inherit;
+    min-height: 80px; resize: vertical; margin-top: 10px;
+  }
+  .field-label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-soft); margin: 14px 0 6px; display: block; }
+
+  .modal-bg {
+    display: none; position: fixed; inset: 0; background: rgba(35,35,35,0.45);
+    z-index: 50; padding: 16px; overflow-y: auto;
+  }
+  .modal-bg.open { display: flex; align-items: flex-start; justify-content: center; }
+  .modal {
+    background: var(--paper); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: 0 12px 40px rgba(35,35,35,.25);
+    padding: 24px; max-width: 640px; width: 100%; margin-top: 4vh;
+  }
+  .modal-close { float: right; background: none; border: none; color: var(--ink-soft); font-size: 24px; cursor: pointer; }
+  .modal-close:hover { color: var(--ink); }
+
+  /* ---------- Recs ---------- */
+  .rec-card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--card-shadow);
+    padding: 16px; margin-bottom: 14px; display: flex; gap: 14px; align-items: flex-start;
+  }
+  .rec-card .cover-wrap { width: 72px; flex-shrink: 0; }
+  .rec-card h4 { font-size: 16px; font-family: "Bookerly", Charter, Georgia, serif; }
+  .rec-card .rec-author { color: var(--ink-soft); font-size: 13px; margin-bottom: 6px; }
+  .rec-card .rec-why { font-size: 13px; line-height: 1.5; color: var(--teal); }
+  .rec-card .rec-add { margin-top: 8px; }
+  .spinner {
+    display: inline-block; width: 16px; height: 16px; border: 2px solid var(--line);
+    border-top-color: var(--orange); border-radius: 50%; animation: spin .7s linear infinite;
+    vertical-align: middle; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ---------- Share ---------- */
+  .share-card {
+    background: var(--paper);
+    border: 1px solid var(--line); border-radius: var(--radius);
+    border-top: 6px solid var(--orange);
+    box-shadow: var(--card-shadow);
+    padding: 28px; max-width: 520px;
+  }
+  .share-card h3 { font-family: "Bookerly", Charter, Georgia, serif; font-size: 22px; margin-bottom: 4px; }
+  .share-card .sc-sub { color: var(--ink-soft); font-size: 13px; margin-bottom: 18px; }
+  .share-row { display: flex; justify-content: space-between; align-items: baseline; padding: 9px 0; border-bottom: 1px solid var(--line); gap: 12px; }
+  .share-row:last-child { border-bottom: none; }
+  .share-row .st { font-size: 14px; font-weight: 600; }
+  .share-row .sa { font-size: 12px; color: var(--ink-soft); }
+  .share-row .ss { color: var(--orange-deep); font-size: 13px; white-space: nowrap; }
+  pre.share-text {
+    background: var(--paper-shade); border: 1px solid var(--line); border-radius: 8px;
+    padding: 14px; font-size: 13px; white-space: pre-wrap; margin: 14px 0;
+    color: var(--ink); font-family: ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (max-width: 520px) {
+    .grid { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 12px; }
+    .detail .cover-wrap { width: 130px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ SIGN IN ============ -->
+<section id="signin">
+  <div class="book-mark">📖</div>
+  <h1>Shelf<em>d</em></h1>
+  <p>Scan it. Shelve it. Rate it.<br>Sign in with your email to open your shelf.</p>
+  <div class="signin-card">
+    <label for="nameInput">Your name</label>
+    <input type="text" id="nameInput" placeholder="Eben" autocomplete="name">
+    <label for="emailInput">Email</label>
+    <input type="text" id="emailInput" placeholder="you@example.com" autocomplete="email" inputmode="email"
+      onkeydown="if(event.key==='Enter')signIn()">
+    <button class="btn" onclick="signIn()">Open my shelf</button>
+    <div class="status" id="signinStatus"></div>
+  </div>
+  <div class="profiles" id="profileList"></div>
+</section>
+
+<!-- ============ APP ============ -->
+<div id="app" style="display:none">
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="logo">Shelf<em>d</em></div>
+      <div class="tagline">Scan it. Shelve it. Rate it.</div>
+    </div>
+    <div class="whoami">
+      <div class="avatar" id="avatar">?</div>
+      <div>
+        <div id="whoName" style="color:var(--ink);font-weight:600"></div>
+        <button class="link-btn" onclick="signOut()">Switch account</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-inner">
+    <button class="tab active" data-view="library" onclick="showView('library')">Library</button>
+    <button class="tab" data-view="add" onclick="showView('add')">+ Add a book</button>
+    <button class="tab" data-view="recs" onclick="showView('recs')">Recommendations</button>
+    <button class="tab" data-view="share" onclick="showView('share')">Share</button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ============ LIBRARY ============ -->
+  <section id="view-library" class="view active">
+    <div class="shelf-stats" id="shelfStats"></div>
+    <div class="toolbar">
+      <input type="text" class="search-input" id="searchInput" placeholder="Search your shelf…" oninput="renderLibrary()">
+      <select id="sortSelect" onchange="renderLibrary()">
+        <option value="added">Recently added</option>
+        <option value="rating">Highest rated</option>
+        <option value="title">Title A–Z</option>
+        <option value="author">Author A–Z</option>
+      </select>
+    </div>
+    <div id="libraryGrid" class="grid"></div>
+    <div id="libraryEmpty" class="empty" style="display:none">
+      <div class="big">📚</div>
+      <p><strong>Your shelf is empty.</strong></p>
+      <p style="margin-top:6px">Hit <b>+ Add a book</b> and scan the barcode on the back of any book.</p>
+    </div>
+  </section>
+
+  <!-- ============ ADD ============ -->
+  <section id="view-add" class="view">
+    <h2>Add a book</h2>
+    <p class="sub">Point your camera at the barcode on the back cover, or type the ISBN / title below.</p>
+
+    <div class="panel">
+      <div class="row" style="justify-content:center">
+        <button class="btn" id="scanBtn" onclick="toggleScanner()">📷 Start scanning</button>
+      </div>
+      <div id="reader"></div>
+      <p class="scan-hint" id="scanHint"></p>
+    </div>
+
+    <div class="panel">
+      <span class="field-label" style="margin-top:0">Or enter it manually</span>
+      <div class="row">
+        <input type="text" id="isbnInput" placeholder="ISBN or title + author" onkeydown="if(event.key==='Enter')lookupManual()">
+        <button class="btn ghost" onclick="lookupManual()">Look up</button>
+      </div>
+      <div class="status" id="lookupStatus"></div>
+    </div>
+
+    <div class="panel" id="previewPanel" style="display:none">
+      <div class="detail" id="previewDetail"></div>
+      <div class="row" style="margin-top:18px">
+        <button class="btn" onclick="addPreviewToLibrary()">Add to my library</button>
+        <button class="btn ghost" onclick="clearPreview()">Cancel</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RECS ============ -->
+  <section id="view-recs" class="view">
+    <h2>Recommended for you</h2>
+    <p class="sub">Pulled from the genres of your highest-rated books. Most are on Libby (free with a library card) or Kindle.</p>
+    <button class="btn" id="recBtn" onclick="getRecommendations()">✦ Get recommendations</button>
+    <div id="recStatus" class="status"></div>
+    <div id="recList" style="margin-top:18px"></div>
+  </section>
+
+  <!-- ============ SHARE ============ -->
+  <section id="view-share" class="view">
+    <h2>Share your shelf</h2>
+    <p class="sub">A clean snapshot of your library — copy it and drop it anywhere. Anyone can visit this same link and start their own shelf.</p>
+    <div class="share-card" id="shareCard"></div>
+    <pre class="share-text" id="shareText"></pre>
+    <button class="btn" onclick="copyShare()">Copy to clipboard</button>
+    <span class="status" id="copyStatus" style="display:inline-block;margin-left:10px"></span>
+  </section>
+
+</main>
+</div>
+
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+/* ================= ACCOUNTS (email-based profiles on this device) ================= */
+let currentUser = null;   // { name, email }
+let library = [];
+let preview = null;
+let scanner = null;
+let scanning = false;
+
+const USERS_KEY = 'shelfd-users';
+const CURRENT_KEY = 'shelfd-current';
+const shelfKey = email => 'shelfd-shelf-' + email;
+
+function getUsers() {
+  try { return JSON.parse(localStorage.getItem(USERS_KEY)) || []; } catch(e) { return []; }
+}
+function renderProfiles() {
+  const users = getUsers();
+  const el = document.getElementById('profileList');
+  if (!users.length) { el.innerHTML = ''; return; }
+  el.innerHTML = '<div class="pl">Shelves on this device</div>' + users.map(u => `
+    <button class="profile-row" onclick="quickSignIn('${u.email}')">
+      <div class="avatar">${(u.name || u.email)[0].toUpperCase()}</div>
+      <div><div>${u.name || ''}</div><div class="pe">${u.email}</div></div>
+    </button>`).join('');
+}
+function signIn() {
+  const name = document.getElementById('nameInput').value.trim();
+  const email = document.getElementById('emailInput').value.trim().toLowerCase();
+  const st = document.getElementById('signinStatus');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    st.className = 'status err'; st.textContent = 'Enter a valid email so your shelf has a home.';
+    return;
+  }
+  let users = getUsers();
+  const existing = users.find(u => u.email === email);
+  if (existing) { if (name) existing.name = name; }
+  else users.push({ name: name || email.split('@')[0], email });
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  localStorage.setItem(CURRENT_KEY, email);
+  enterApp(users.find(u => u.email === email));
+}
+function quickSignIn(email) {
+  const u = getUsers().find(x => x.email === email);
+  if (!u) return;
+  localStorage.setItem(CURRENT_KEY, email);
+  enterApp(u);
+}
+function enterApp(user) {
+  currentUser = user;
+  document.getElementById('signin').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('avatar').textContent = (user.name || user.email)[0].toUpperCase();
+  document.getElementById('whoName').textContent = user.name || user.email;
+  loadLibrary();
+}
+function signOut() {
+  if (scanning) stopScanner();
+  localStorage.removeItem(CURRENT_KEY);
+  currentUser = null; library = [];
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('signin').style.display = 'block';
+  renderProfiles();
+}
+
+/* ================= STORAGE ================= */
+function loadLibrary() {
+  try {
+    const raw = localStorage.getItem(shelfKey(currentUser.email));
+    library = raw ? JSON.parse(raw) : [];
+  } catch (e) { library = []; }
+  renderLibrary();
+  renderShare();
+}
+function saveLibrary() {
+  try { localStorage.setItem(shelfKey(currentUser.email), JSON.stringify(library)); }
+  catch (e) { console.error('Save failed', e); }
+}
+
+/* ================= HELPERS ================= */
+function starString(r) {
+  if (!r) return '<span class="unrated">not rated yet</span>';
+  const full = Math.floor(r), half = r % 1 >= 0.5;
+  return '★'.repeat(full) + (half ? '½' : '');
+}
+function esc(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function coverEl(book) {
+  const wrap = document.createElement('div');
+  wrap.className = 'cover-wrap';
+  const showFallback = () => {
+    wrap.innerHTML = `<div class="cover-fallback"><div class="t">${esc(book.title)}</div><div class="a">${esc(book.author)}</div></div>`;
+  };
+  let url = null;
+  if (book.coverId) url = `https://covers.openlibrary.org/b/id/${book.coverId}-L.jpg`;
+  else if (book.isbn) url = `https://covers.openlibrary.org/b/isbn/${book.isbn}-L.jpg?default=false`;
+  if (url) {
+    const img = document.createElement('img');
+    img.alt = book.title + ' cover';
+    img.loading = 'lazy';
+    img.onerror = showFallback;
+    img.onload = () => { if (img.naturalWidth < 5) showFallback(); };
+    img.src = url;
+    wrap.appendChild(img);
+  } else showFallback();
+  return wrap;
+}
+
+/* ================= LIBRARY VIEW ================= */
+function renderLibrary() {
+  const grid = document.getElementById('libraryGrid');
+  const empty = document.getElementById('libraryEmpty');
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  let books = [...library];
+  if (q) books = books.filter(b => (b.title + ' ' + b.author).toLowerCase().includes(q));
+  if (sort === 'rating') books.sort((a,b) => (b.rating||0) - (a.rating||0));
+  else if (sort === 'title') books.sort((a,b) => a.title.localeCompare(b.title));
+  else if (sort === 'author') books.sort((a,b) => (a.author||'').localeCompare(b.author||''));
+  else books.sort((a,b) => (b.added||0) - (a.added||0));
+
+  const rated = library.filter(b => b.rating);
+  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : '—';
+  document.getElementById('shelfStats').innerHTML = `
+    <div class="stat"><div class="num">${library.length}</div><div class="lbl">Books</div></div>
+    <div class="stat"><div class="num">${rated.length}</div><div class="lbl">Rated</div></div>
+    <div class="stat"><div class="num">${avg}</div><div class="lbl">Avg rating</div></div>`;
+
+  empty.style.display = library.length ? 'none' : 'block';
+  grid.innerHTML = '';
+  books.forEach(b => {
+    const card = document.createElement('button');
+    card.className = 'book-card';
+    card.setAttribute('aria-label', 'Open ' + b.title);
+    card.onclick = () => openBook(b.id);
+    card.appendChild(coverEl(b));
+    const meta = document.createElement('div');
+    meta.className = 'card-meta';
+    meta.innerHTML = `<span class="card-title">${esc(b.title)}</span><div class="card-stars">${starString(b.rating)}</div>`;
+    card.appendChild(meta);
+    grid.appendChild(card);
+  });
+}
+
+/* ================= SCANNER ================= */
+async function toggleScanner() {
+  const btn = document.getElementById('scanBtn');
+  const hint = document.getElementById('scanHint');
+  if (scanning) { await stopScanner(); return; }
+  if (location.protocol === 'file:') {
+    hint.textContent = 'Cameras only work on a real website (https). Open this page from your GitHub Pages link, not as a downloaded file.';
+    return;
+  }
+  try {
+    scanner = new Html5Qrcode('reader', { formatsToSupport: [
+      Html5QrcodeSupportedFormats.EAN_13,
+      Html5QrcodeSupportedFormats.EAN_8,
+      Html5QrcodeSupportedFormats.UPC_A
+    ]});
+    await scanner.start(
+      { facingMode: 'environment' },
+      { fps: 10, qrbox: { width: 260, height: 140 } },
+      async (decoded) => {
+        if (/^97[89]\d{10}$/.test(decoded)) {
+          await stopScanner();
+          hint.textContent = 'Barcode captured: ' + decoded;
+          lookupISBN(decoded);
+        }
+      },
+      () => {}
+    );
+    scanning = true;
+    btn.textContent = '⏹ Stop scanning';
+    hint.textContent = 'Hold the back-cover barcode steady in the box.';
+  } catch (e) {
+    hint.textContent = 'Camera was blocked. Check Settings → Safari (or Chrome) → Camera → Allow, then try again. Or just type the ISBN below.';
+  }
+}
+async function stopScanner() {
+  try { if (scanner) await scanner.stop(); } catch(e) {}
+  scanning = false;
+  document.getElementById('scanBtn').textContent = '📷 Start scanning';
+}
+
+/* ================= LOOKUP (Open Library) ================= */
+function setStatus(msg, cls) {
+  const el = document.getElementById('lookupStatus');
+  el.className = 'status ' + (cls || '');
+  el.innerHTML = msg;
+}
+function lookupManual() {
+  const v = document.getElementById('isbnInput').value.trim();
+  if (!v) return;
+  const digits = v.replace(/[-\s]/g, '');
+  if (/^\d{10}$|^\d{13}$/.test(digits)) lookupISBN(digits);
+  else lookupByTitle(v);
+}
+
+async function lookupISBN(isbn) {
+  setStatus('<span class="spinner"></span>Looking up ' + esc(isbn) + '…');
+  try {
+    const r = await fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`);
+    const data = await r.json();
+    const d = data['ISBN:' + isbn];
+    if (!d) throw new Error('not found');
+    showPreview({
+      isbn,
+      title: d.title || 'Unknown title',
+      author: (d.authors || []).map(a => a.name).join(', '),
+      year: (d.publish_date || '').match(/\d{4}/)?.[0] || '',
+      coverId: d.cover ? Number((d.cover.large || d.cover.medium || '').match(/\/id\/(\d+)/)?.[1]) || null : null,
+      subjects: (d.subjects || []).slice(0, 8).map(s => s.name || s)
+    });
+  } catch (e) {
+    setStatus("Couldn't find that ISBN. Double-check the digits, or try the title + author instead.", 'err');
+  }
+}
+
+async function lookupByTitle(text) {
+  setStatus('<span class="spinner"></span>Searching for “' + esc(text) + '”…');
+  try {
+    const r = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(text)}&limit=1&fields=title,author_name,first_publish_year,cover_i,isbn,subject`);
+    const data = await r.json();
+    const d = data.docs && data.docs[0];
+    if (!d) throw new Error('not found');
+    showPreview({
+      isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || (d.isbn || [])[0] || '',
+      title: d.title,
+      author: (d.author_name || []).join(', '),
+      year: d.first_publish_year || '',
+      coverId: d.cover_i || null,
+      subjects: (d.subject || []).slice(0, 8)
+    });
+  } catch (e) {
+    setStatus("No luck finding that. Try adding the author's name.", 'err');
+  }
+}
+
+/* ================= PREVIEW & ADD ================= */
+function showPreview(book) {
+  const dup = library.some(b => (b.isbn && book.isbn && b.isbn === book.isbn) ||
+    (b.title.toLowerCase() === book.title.toLowerCase() && b.author === book.author));
+  setStatus(dup ? 'That one is already on your shelf.' : 'Found it ✓', 'ok');
+  preview = book;
+  const panel = document.getElementById('previewPanel');
+  const det = document.getElementById('previewDetail');
+  det.innerHTML = '';
+  det.appendChild(coverEl(book));
+  const info = document.createElement('div');
+  info.className = 'detail-info';
+  info.innerHTML = `
+    <h3>${esc(book.title)}</h3>
+    <div class="author">${esc(book.author)}${book.year ? ' · ' + esc(book.year) : ''}</div>`;
+  det.appendChild(info);
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function clearPreview() {
+  preview = null;
+  document.getElementById('previewPanel').style.display = 'none';
+  setStatus('');
+}
+function addPreviewToLibrary() {
+  if (!preview) return;
+  const existing = library.find(b => b.isbn && preview.isbn && b.isbn === preview.isbn);
+  if (existing) {
+    clearPreview(); showView('library'); openBook(existing.id);
+    return;
+  }
+  const book = { ...preview, id: 'b' + Date.now(), rating: 0, review: '', added: Date.now() };
+  library.push(book);
+  saveLibrary();
+  clearPreview();
+  document.getElementById('isbnInput').value = '';
+  renderLibrary(); renderShare();
+  showView('library');
+  openBook(book.id);
+}
+
+/* ================= DETAIL MODAL ================= */
+function starSVG(pct, uid) {
+  const path = 'M15 2.5l3.7 7.9 8.6 1.1-6.3 6 1.6 8.5L15 21.9 7.4 26l1.6-8.5-6.3-6 8.6-1.1z';
+  return `<svg viewBox="0 0 30 30" aria-hidden="true">
+    <path d="${path}" fill="rgba(35,35,35,0.14)"/>
+    <clipPath id="clip${uid}"><rect width="${30*pct/100}" height="30"/></clipPath>
+    <path d="${path}" fill="#ff9900" clip-path="url(#clip${uid})"/>
+  </svg>`;
+}
+function openBook(id) {
+  const b = library.find(x => x.id === id);
+  if (!b) return;
+  const starsHtml = [1,2,3,4,5].map(i => {
+    const fillPct = Math.max(0, Math.min(1, (b.rating || 0) - (i - 1))) * 100;
+    return `<span class="star" onclick="rateClick(event, '${id}', ${i})" title="${i} star${i>1?'s':''}">${starSVG(Math.round(fillPct), id + '-' + i)}</span>`;
+  }).join('');
+  const mc = document.getElementById('modalContent');
+  mc.innerHTML = `
+    <button class="modal-close" onclick="closeModal()" aria-label="Close">×</button>
+    <div class="detail">
+      <div id="modalCover"></div>
+      <div class="detail-info">
+        <h3>${esc(b.title)}</h3>
+        <div class="author">${esc(b.author)}${b.year ? ' · ' + esc(b.year) : ''}</div>
+        <span class="field-label">Your rating <span style="text-transform:none;letter-spacing:0">(tap left/right half of a star)</span></span>
+        <div class="stars">${starsHtml}</div>
+        <span class="rating-label">${b.rating ? b.rating + ' / 5' : ''}</span>
+        <span class="field-label">Your review</span>
+        <textarea id="reviewBox" placeholder="What'd you think?">${esc(b.review || '')}</textarea>
+        <div class="row" style="margin-top:14px">
+          <button class="btn" onclick="saveReview('${id}')">Save</button>
+          <button class="btn danger" onclick="removeBook('${id}')">Remove from shelf</button>
+        </div>
+      </div>
+    </div>`;
+  mc.querySelector('#modalCover').replaceWith(coverEl(b));
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function rateClick(ev, id, starIndex) {
+  const b = library.find(x => x.id === id);
+  const rect = ev.currentTarget.getBoundingClientRect();
+  const half = (ev.clientX - rect.left) < rect.width / 2;
+  let newRating = starIndex - (half ? 0.5 : 0);
+  if (b.rating === newRating) newRating = 0;
+  b.rating = newRating;
+  saveLibrary();
+  openBook(id); renderLibrary(); renderShare();
+}
+function saveReview(id) {
+  const b = library.find(x => x.id === id);
+  b.review = document.getElementById('reviewBox').value;
+  saveLibrary();
+  closeModal(); renderLibrary(); renderShare();
+}
+function removeBook(id) {
+  library = library.filter(x => x.id !== id);
+  saveLibrary();
+  closeModal(); renderLibrary(); renderShare();
+}
+
+/* ================= RECOMMENDATIONS ================= */
+const SKIP_SUBJECTS = ['accessible book','protected daisy','in library','overdrive','fiction','large type books','new york times bestseller'];
+async function getRecommendations() {
+  const status = document.getElementById('recStatus');
+  const list = document.getElementById('recList');
+  const btn = document.getElementById('recBtn');
+  if (!library.length) {
+    status.className = 'status err';
+    status.textContent = 'Add and rate a few books first so there is something to go on.';
+    return;
+  }
+  btn.disabled = true;
+  status.className = 'status';
+  status.innerHTML = '<span class="spinner"></span>Reading your shelf…';
+  list.innerHTML = '';
+  try {
+    const ranked = [...library].sort((a,b) => (b.rating||3) - (a.rating||3));
+    const subjectScore = {};
+    ranked.forEach((b, idx) => {
+      const weight = (b.rating || 3) * (1 - idx * 0.05);
+      (b.subjects || []).forEach(s => {
+        const key = String(s).toLowerCase();
+        if (SKIP_SUBJECTS.includes(key)) return;
+        subjectScore[key] = (subjectScore[key] || 0) + weight;
+      });
+    });
+    const topSubjects = Object.entries(subjectScore).sort((a,b) => b[1]-a[1]).slice(0, 3).map(e => e[0]);
+    const ownedTitles = new Set(library.map(b => b.title.toLowerCase()));
+    const recs = [];
+    const seen = new Set();
+    if (topSubjects.length) {
+      for (const subj of topSubjects) {
+        const r = await fetch(`https://openlibrary.org/search.json?q=subject:"${encodeURIComponent(subj)}"&sort=rating&limit=8&fields=title,author_name,cover_i,first_publish_year,isbn`);
+        const data = await r.json();
+        for (const d of (data.docs || [])) {
+          const key = d.title.toLowerCase();
+          if (ownedTitles.has(key) || seen.has(key) || !d.cover_i) continue;
+          seen.add(key);
+          recs.push({
+            title: d.title,
+            author: (d.author_name || []).join(', '),
+            year: d.first_publish_year || '',
+            coverId: d.cover_i,
+            isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || '',
+            why: `Because you rated books tagged “${subj}” highly.`
+          });
+          if (recs.length >= 8) break;
+        }
+        if (recs.length >= 8) break;
+      }
+    }
+    if (!recs.length) {
+      const topAuthor = (ranked[0].author || '').split(',')[0].trim();
+      if (topAuthor) {
+        const r = await fetch(`https://openlibrary.org/search.json?q=author:"${encodeURIComponent(topAuthor)}"&sort=rating&limit=10&fields=title,author_name,cover_i,first_publish_year,isbn`);
+        const data = await r.json();
+        for (const d of (data.docs || [])) {
+          const key = d.title.toLowerCase();
+          if (ownedTitles.has(key) || seen.has(key) || !d.cover_i) continue;
+          seen.add(key);
+          recs.push({
+            title: d.title, author: (d.author_name || []).join(', '),
+            year: d.first_publish_year || '', coverId: d.cover_i,
+            isbn: (d.isbn || []).find(i => /^97[89]/.test(i)) || '',
+            why: `More from ${topAuthor}, your top-rated author.`
+          });
+          if (recs.length >= 8) break;
+        }
+      }
+    }
+    if (!recs.length) throw new Error('empty');
+    status.textContent = '';
+    recs.forEach(rec => {
+      const card = document.createElement('div');
+      card.className = 'rec-card';
+      card.appendChild(coverEl(rec));
+      const info = document.createElement('div');
+      info.innerHTML = `
+        <h4>${esc(rec.title)}</h4>
+        <div class="rec-author">${esc(rec.author)}${rec.year ? ' · ' + rec.year : ''}</div>
+        <div class="rec-why">${esc(rec.why)}</div>
+        <div class="rec-add"><button class="btn ghost">+ Add to shelf</button></div>`;
+      info.querySelector('button').onclick = () => {
+        preview = { isbn: rec.isbn, title: rec.title, author: rec.author, year: rec.year, coverId: rec.coverId, subjects: [] };
+        addPreviewToLibrary();
+      };
+      card.appendChild(info);
+      list.appendChild(card);
+    });
+  } catch (e) {
+    status.className = 'status err';
+    status.textContent = "Couldn't build recommendations right now. Rate a couple more books and try again.";
+  }
+  btn.disabled = false;
+}
+
+/* ================= SHARE ================= */
+function renderShare() {
+  const card = document.getElementById('shareCard');
+  const txt = document.getElementById('shareText');
+  if (!library.length) {
+    card.innerHTML = '<h3>Nothing to share yet</h3><div class="sc-sub">Add some books and come back.</div>';
+    txt.textContent = '';
+    return;
+  }
+  const rated = [...library].filter(b => b.rating).sort((a,b) => b.rating - a.rating);
+  const top = (rated.length ? rated : library).slice(0, 5);
+  const avg = rated.length ? (rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1) : null;
+  card.innerHTML = `
+    <h3>${esc(currentUser.name)}'s shelf</h3>
+    <div class="sc-sub">${library.length} book${library.length===1?'':'s'}${avg ? ' · ' + avg + '★ average' : ''}</div>
+    ${top.map(b => `
+      <div class="share-row">
+        <div><div class="st">${esc(b.title)}</div><div class="sa">${esc(b.author)}</div></div>
+        <div class="ss">${b.rating ? starString(b.rating) : ''}</div>
+      </div>`).join('')}`;
+  const lines = [`📚 ${currentUser.name}'s shelf — ${library.length} books${avg ? `, ${avg}★ avg` : ''}`, ''];
+  [...library].sort((a,b)=>(b.rating||0)-(a.rating||0)).forEach(b => {
+    lines.push(`${b.rating ? starString(b.rating).replace(/<[^>]*>/g,'') : '·'}  ${b.title} — ${b.author}`);
+  });
+  lines.push('', 'Start your own shelf: ' + location.href.split('#')[0]);
+  txt.textContent = lines.join('\n');
+}
+async function copyShare() {
+  const txt = document.getElementById('shareText').textContent;
+  const status = document.getElementById('copyStatus');
+  try {
+    await navigator.clipboard.writeText(txt);
+    status.className = 'status ok'; status.textContent = 'Copied ✓';
+  } catch (e) {
+    const range = document.createRange();
+    range.selectNodeContents(document.getElementById('shareText'));
+    const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    status.textContent = 'Press Ctrl/Cmd+C to copy';
+  }
+  setTimeout(() => status.textContent = '', 2500);
+}
+
+/* ================= NAV ================= */
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  document.getElementById('view-' + name).classList.add('active');
+  if (name !== 'add' && scanning) stopScanner();
+  if (name === 'share') renderShare();
+}
+
+/* ================= BOOT ================= */
+(function boot() {
+  const cur = localStorage.getItem(CURRENT_KEY);
+  const u = cur && getUsers().find(x => x.email === cur);
+  if (u) enterApp(u);
+  else renderProfiles();
+})();
+</script>
+</body>
+</html>
